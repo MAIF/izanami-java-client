@@ -1,0 +1,26 @@
+name: Maven release
+
+on: workflow_dispatch
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+    - name: Set up JDK 11
+      uses: actions/setup-java@v3
+      with:
+        java-version: '11'
+        distribution: 'temurin'
+        cache: maven
+    - name: maven release
+      uses: qcastel/github-actions-maven-release@v1.12.41
+      env:
+        JAVA_HOME: /usr/lib/jvm/java-11-openjdk/
+      with:
+        release-branch-name: "main"
+        maven-args: " -Dmaven.deploy.skip=true"
+        ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+        git-release-bot-name: "Release bot"
+        git-release-bot-email: "benjamin.cavy@maif.fr"
