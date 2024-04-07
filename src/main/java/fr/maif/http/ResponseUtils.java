@@ -41,9 +41,9 @@ public final class ResponseUtils {
                     .map(Result::new)
                     .orElseGet(() -> new Result<>("Failed to parse response"));
         } catch (JsonMappingException e) {
-            return new Result<>("Unexpected format received from Izanami");
+            return new Result<>("Unexpected format received from Izanami: " + json);
         } catch (JsonProcessingException e) {
-            return new Result<>("Invalid JSON received from Izanami");
+            return new Result<>("Invalid JSON received from Izanami: " + json);
         }
     }
 
@@ -60,9 +60,9 @@ public final class ResponseUtils {
                     .map(Result::new)
                     .orElseGet(() -> new Result<>("Failed to parse response"));
         } catch (JsonMappingException e) {
-            return new Result<>("Unexpected format received from Izanami");
+            return new Result<>("Unexpected format received from Izanami: " + json);
         } catch (JsonProcessingException e) {
-            return new Result<>("Invalid JSON received from Izanami");
+            return new Result<>("Invalid JSON received from Izanami: " + json);
         }
     }
 
@@ -83,7 +83,7 @@ public final class ResponseUtils {
         }
     }
 
-    static Optional<Feature> parseFeature(String id, ObjectNode json) {
+    public static Optional<Feature> parseFeature(String id, ObjectNode json) {
         if(json.isNull()) {
             return Optional.empty();
         }

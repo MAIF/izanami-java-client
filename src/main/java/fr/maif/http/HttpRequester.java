@@ -17,13 +17,12 @@ import java.util.stream.Collectors;
 public final class HttpRequester {
     private static final Logger LOGGER = LoggerFactory.getLogger(HttpRequester.class);
 
-    static String url(ClientConfiguration configuration, FeatureRequest request) {
-        var url = configuration.connectionInformation.url  + "/v2/features";
 
+    public static TreeMap<String, String> queryParametersAsMap(FeatureRequest request) {
         var maybeFeatures = request.getFeatures().stream().sorted(String::compareTo).collect(Collectors.joining(","));
 
-        var params = new TreeMap<>();
-        params.put("conditions", true);
+        var params = new TreeMap<String, String>();
+        params.put("conditions", "true");
         if(!maybeFeatures.isBlank()) {
             params.put("features", maybeFeatures);
         }
@@ -33,9 +32,18 @@ public final class HttpRequester {
                 .map(user -> params.put("user", user));
 
 
-        String searchPart = params.entrySet().stream()
+        return params;
+    }
+    public static String queryParameters(FeatureRequest request) {
+        return queryParametersAsMap(request).entrySet().stream()
                 .map(e -> e.getKey() + "=" + e.getValue())
                 .collect(Collectors.joining("&"));
+    }
+
+    static String url(ClientConfiguration configuration, FeatureRequest request) {
+        var url = configuration.connectionInformation.url  + "/v2/features";
+
+        String searchPart = queryParameters(request);
 
         url = !searchPart.isBlank() ? (url + "?" + searchPart) : url;
 
@@ -48,7 +56,6 @@ public final class HttpRequester {
             Function<String, Result<T>> responseMapper
     ) {
         return configuration.httpClient.apply(request)
-                // TODO handle error
                 .thenApply(resp -> responseMapper.apply(resp.body));
     }
     public static CompletableFuture<Result<Map<String, Feature>>> performRequest(

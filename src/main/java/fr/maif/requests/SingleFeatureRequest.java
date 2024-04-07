@@ -2,6 +2,9 @@ package fr.maif.requests;
 
 import fr.maif.FeatureClientErrorStrategy;
 
+import java.time.Duration;
+import java.util.Optional;
+
 /**
  * This class is a data container used to represent query for a single feature
  */
@@ -33,6 +36,16 @@ public class SingleFeatureRequest {
      */
     public SingleFeatureRequest withUser(String val) {
         request.user = val;
+        return this;
+    }
+
+    /**
+     * Add or update http call timeout for this request
+     * @param timeout http call timeout to use for this request
+     * @return this request modified with provided http call timeout
+     */
+    public SingleFeatureRequest withCallTimeout(Duration timeout) {
+        request.callTimeout = Optional.ofNullable(timeout);
         return this;
     }
 

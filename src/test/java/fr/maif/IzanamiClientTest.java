@@ -54,8 +54,8 @@ public class IzanamiClientTest {
         String id = "ae5dd05d-4e90-4ce7-bee7-3751750fdeaa";
         var featureStub = Mocks.feature("bar", false).withOverload(overload(true).withCondition(condition(true).withRule(userListRule("foo"))));
         String stub = newResponse().withFeature(id, featureStub).toJson();
-        String clientId = "87mpqvd86tskt43h";
-        String clientSecret = "kmysr3rr431h9bx04hyk604jz0wwzr6v4vetgex3hb1u1xgnlrnirea13o31c9dg";
+        String clientId = "THIS_IS_NOT_A_REAL_DATA_PLEASE_DONT_FILE_AN_ISSUE_ABOUT_THIS";
+        String clientSecret = "THIS_IS_NOT_A_REAL_SECRET_PLEASE_DONT_FILE_AN_ISSUE_ABOUT_THIS";
 
         mockServer.stubFor(WireMock.get("/api/v2/features?conditions=true&features=" + id + "&user=bar")
                 .withHeader("Izanami-Client-Id", equalTo(clientId))
@@ -106,8 +106,8 @@ public class IzanamiClientTest {
         String id = "ae5dd05d-4e90-4ce7-bee7-3751750fdeaa";
         var featureStub = Mocks.feature("bar", false).withOverload(overload(false));
         var response = newResponse().withFeature(id, featureStub);
-        String clientId = "87mpqvd86tskt43h";
-        String clientSecret = "kmysr3rr431h9bx04hyk604jz0wwzr6v4vetgex3hb1u1xgnlrnirea13o31c9dg";
+        String clientId = "THIS_IS_NOT_A_REAL_DATA_PLEASE_DONT_FILE_AN_ISSUE_ABOUT_THIS";
+        String clientSecret = "THIS_IS_NOT_A_REAL_SECRET_PLEASE_DONT_FILE_AN_ISSUE_ABOUT_THIS";
 
         mockServer.stubFor(WireMock.get("/api/v2/features?conditions=true&features=" + id + "&user=bar")
                 .withHeader("Izanami-Client-Id", equalTo(clientId))
@@ -133,8 +133,8 @@ public class IzanamiClientTest {
         featureStub.active = true;
 
         mockServer.stubFor(WireMock.get("/api/v2/features?conditions=true&features=ae5dd05d-4e90-4ce7-bee7-3751750fdeaa&user=bar")
-                .withHeader("Izanami-Client-Id", equalTo("87mpqvd86tskt43h"))
-                .withHeader("Izanami-Client-Secret", equalTo("kmysr3rr431h9bx04hyk604jz0wwzr6v4vetgex3hb1u1xgnlrnirea13o31c9dg"))
+                .withHeader("Izanami-Client-Id", equalTo("THIS_IS_NOT_A_REAL_DATA_PLEASE_DONT_FILE_AN_ISSUE_ABOUT_THIS"))
+                .withHeader("Izanami-Client-Secret", equalTo("THIS_IS_NOT_A_REAL_SECRET_PLEASE_DONT_FILE_AN_ISSUE_ABOUT_THIS"))
                 .willReturn(WireMock.ok().withHeader("Content-Type", "application/json")
                         .withBody(response.toJson())
                 ));
@@ -152,8 +152,8 @@ public class IzanamiClientTest {
         String id = "ae5dd05d-4e90-4ce7-bee7-3751750fdeaa";
         var featureStub = Mocks.feature("bar", false).withOverload(overload(false));
         var response = newResponse().withFeature(id, featureStub);
-        String clientId = "87mpqvd86tskt43h";
-        String clientSecret = "kmysr3rr431h9bx04hyk604jz0wwzr6v4vetgex3hb1u1xgnlrnirea13o31c9dg";
+        String clientId = "THIS_IS_NOT_A_REAL_DATA_PLEASE_DONT_FILE_AN_ISSUE_ABOUT_THIS";
+        String clientSecret = "THIS_IS_NOT_A_REAL_SECRET_PLEASE_DONT_FILE_AN_ISSUE_ABOUT_THIS";
 
         mockServer.stubFor(WireMock.get("/api/v2/features?conditions=true&features=" + id)
                 .withHeader("Izanami-Client-Id", equalTo(clientId))
@@ -207,8 +207,8 @@ public class IzanamiClientTest {
         String id = "ae5dd05d-4e90-4ce7-bee7-3751750fdeaa";
         var featureStub = Mocks.feature("bar", true).withOverload(overload(true).withScript("foo"));
         var response = newResponse().withFeature(id, featureStub);
-        String clientId = "87mpqvd86tskt43h";
-        String clientSecret = "kmysr3rr431h9bx04hyk604jz0wwzr6v4vetgex3hb1u1xgnlrnirea13o31c9dg";
+        String clientId = "THIS_IS_NOT_A_REAL_DATA_PLEASE_DONT_FILE_AN_ISSUE_ABOUT_THIS";
+        String clientSecret = "THIS_IS_NOT_A_REAL_SECRET_PLEASE_DONT_FILE_AN_ISSUE_ABOUT_THIS";
 
         mockServer.stubFor(WireMock.get("/api/v2/features?conditions=true&features=" + id)
                 .withHeader("Izanami-Client-Id", equalTo(clientId))
@@ -255,8 +255,8 @@ public class IzanamiClientTest {
         String id = "ae5dd05d-4e90-4ce7-bee7-3751750fdeaa";
         var featureStub = Mocks.feature("bar", true).withOverload(overload(true));
         var response = newResponse().withFeature(id, featureStub);
-        String clientId = "87mpqvd86tskt43h";
-        String clientSecret = "kmysr3rr431h9bx04hyk604jz0wwzr6v4vetgex3hb1u1xgnlrnirea13o31c9dg";
+        String clientId = "THIS_IS_NOT_A_REAL_DATA_PLEASE_DONT_FILE_AN_ISSUE_ABOUT_THIS";
+        String clientSecret = "THIS_IS_NOT_A_REAL_SECRET_PLEASE_DONT_FILE_AN_ISSUE_ABOUT_THIS";
         String url = "/api/v2/features?conditions=true&features=" + id;
 
         mockServer.stubFor(WireMock.get(url)
@@ -307,8 +307,8 @@ public class IzanamiClientTest {
         String id = "ae5dd05d-4e90-4ce7-bee7-3751750fdeaa";
         var featureStub = Mocks.feature("bar", true).withOverload(overload(true));
         var response = newResponse().withFeature(id, featureStub);
-        String clientId = "87mpqvd86tskt43h";
-        String clientSecret = "kmysr3rr431h9bx04hyk604jz0wwzr6v4vetgex3hb1u1xgnlrnirea13o31c9dg";
+        String clientId = "THIS_IS_NOT_A_REAL_DATA_PLEASE_DONT_FILE_AN_ISSUE_ABOUT_THIS";
+        String clientSecret = "THIS_IS_NOT_A_REAL_SECRET_PLEASE_DONT_FILE_AN_ISSUE_ABOUT_THIS";
         String url = "/api/v2/features?conditions=true&features=" + id;
 
         mockServer.stubFor(WireMock.get(url)
@@ -347,8 +347,8 @@ public class IzanamiClientTest {
         String id = "ae5dd05d-4e90-4ce7-bee7-3751750fdeaa";
         var featureStub = Mocks.feature("bar", true).withOverload(overload(true));
         var response = newResponse().withFeature(id, featureStub);
-        String clientId = "87mpqvd86tskt43h";
-        String clientSecret = "kmysr3rr431h9bx04hyk604jz0wwzr6v4vetgex3hb1u1xgnlrnirea13o31c9dg";
+        String clientId = "THIS_IS_NOT_A_REAL_DATA_PLEASE_DONT_FILE_AN_ISSUE_ABOUT_THIS";
+        String clientSecret = "THIS_IS_NOT_A_REAL_SECRET_PLEASE_DONT_FILE_AN_ISSUE_ABOUT_THIS";
         String url = "/api/v2/features?conditions=true&features=" + id;
 
         mockServer.stubFor(WireMock.get(url)
@@ -387,8 +387,8 @@ public class IzanamiClientTest {
         String id = "ae5dd05d-4e90-4ce7-bee7-3751750fdeaa";
         var featureStub = Mocks.feature("bar", true).withOverload(overload(true));
         var response = newResponse().withFeature(id, featureStub);
-        String clientId = "87mpqvd86tskt43h";
-        String clientSecret = "kmysr3rr431h9bx04hyk604jz0wwzr6v4vetgex3hb1u1xgnlrnirea13o31c9dg";
+        String clientId = "THIS_IS_NOT_A_REAL_DATA_PLEASE_DONT_FILE_AN_ISSUE_ABOUT_THIS";
+        String clientSecret = "THIS_IS_NOT_A_REAL_SECRET_PLEASE_DONT_FILE_AN_ISSUE_ABOUT_THIS";
         String url = "/api/v2/features?conditions=true&features=" + id;
 
         mockServer.stubFor(WireMock.get(url)
@@ -430,8 +430,8 @@ public class IzanamiClientTest {
         String id = "ae5dd05d-4e90-4ce7-bee7-3751750fdeaa";
         var featureStub = Mocks.feature("bar", true).withOverload(overload(true));
         var response = newResponse().withFeature(id, featureStub);
-        String clientId = "87mpqvd86tskt43h";
-        String clientSecret = "kmysr3rr431h9bx04hyk604jz0wwzr6v4vetgex3hb1u1xgnlrnirea13o31c9dg";
+        String clientId = "THIS_IS_NOT_A_REAL_DATA_PLEASE_DONT_FILE_AN_ISSUE_ABOUT_THIS";
+        String clientSecret = "THIS_IS_NOT_A_REAL_SECRET_PLEASE_DONT_FILE_AN_ISSUE_ABOUT_THIS";
         String url = "/api/v2/features?conditions=true&features=" + id;
 
         mockServer.stubFor(WireMock.get(url)
@@ -483,8 +483,8 @@ public class IzanamiClientTest {
     @Test
     public void fail_strategy_should_throw_an_exception_when_needed() {
         String id = "ae5dd05d-4e90-4ce7-bee7-3751750fdeaa";
-        String clientId = "87mpqvd86tskt43h";
-        String clientSecret = "kmysr3rr431h9bx04hyk604jz0wwzr6v4vetgex3hb1u1xgnlrnirea13o31c9dg";
+        String clientId = "THIS_IS_NOT_A_REAL_DATA_PLEASE_DONT_FILE_AN_ISSUE_ABOUT_THIS";
+        String clientSecret = "THIS_IS_NOT_A_REAL_SECRET_PLEASE_DONT_FILE_AN_ISSUE_ABOUT_THIS";
 
         var client = IzanamiClient
                 .newBuilder(
@@ -507,8 +507,8 @@ public class IzanamiClientTest {
     @Test
     public void default_value_strategy_should_return_given_value() {
         String id = "ae5dd05d-4e90-4ce7-bee7-3751750fdeaa";
-        String clientId = "87mpqvd86tskt43h";
-        String clientSecret = "kmysr3rr431h9bx04hyk604jz0wwzr6v4vetgex3hb1u1xgnlrnirea13o31c9dg";
+        String clientId = "THIS_IS_NOT_A_REAL_DATA_PLEASE_DONT_FILE_AN_ISSUE_ABOUT_THIS";
+        String clientSecret = "THIS_IS_NOT_A_REAL_SECRET_PLEASE_DONT_FILE_AN_ISSUE_ABOUT_THIS";
 
         var client = IzanamiClient
                 .newBuilder(
@@ -531,8 +531,8 @@ public class IzanamiClientTest {
     @Test
     public void callback_strategy_should_return_callback_value() {
         String id = "ae5dd05d-4e90-4ce7-bee7-3751750fdeaa";
-        String clientId = "87mpqvd86tskt43h";
-        String clientSecret = "kmysr3rr431h9bx04hyk604jz0wwzr6v4vetgex3hb1u1xgnlrnirea13o31c9dg";
+        String clientId = "THIS_IS_NOT_A_REAL_DATA_PLEASE_DONT_FILE_AN_ISSUE_ABOUT_THIS";
+        String clientSecret = "THIS_IS_NOT_A_REAL_SECRET_PLEASE_DONT_FILE_AN_ISSUE_ABOUT_THIS";
         AtomicBoolean callbackCalled = new AtomicBoolean(false);
 
         var client = IzanamiClient
@@ -561,8 +561,8 @@ public class IzanamiClientTest {
     @Test
     public void feature_error_strategy_should_prevail_over_query() {
         String id = "ae5dd05d-4e90-4ce7-bee7-3751750fdeaa";
-        String clientId = "87mpqvd86tskt43h";
-        String clientSecret = "kmysr3rr431h9bx04hyk604jz0wwzr6v4vetgex3hb1u1xgnlrnirea13o31c9dg";
+        String clientId = "THIS_IS_NOT_A_REAL_DATA_PLEASE_DONT_FILE_AN_ISSUE_ABOUT_THIS";
+        String clientSecret = "THIS_IS_NOT_A_REAL_SECRET_PLEASE_DONT_FILE_AN_ISSUE_ABOUT_THIS";
 
         var client = IzanamiClient
                 .newBuilder(
@@ -591,8 +591,8 @@ public class IzanamiClientTest {
     @Test
     public void feature_error_strategy_should_prevail_over_global() {
         String id = "ae5dd05d-4e90-4ce7-bee7-3751750fdeaa";
-        String clientId = "87mpqvd86tskt43h";
-        String clientSecret = "kmysr3rr431h9bx04hyk604jz0wwzr6v4vetgex3hb1u1xgnlrnirea13o31c9dg";
+        String clientId = "THIS_IS_NOT_A_REAL_DATA_PLEASE_DONT_FILE_AN_ISSUE_ABOUT_THIS";
+        String clientSecret = "THIS_IS_NOT_A_REAL_SECRET_PLEASE_DONT_FILE_AN_ISSUE_ABOUT_THIS";
 
         var client = IzanamiClient
                 .newBuilder(
@@ -620,8 +620,8 @@ public class IzanamiClientTest {
     @Test
     public void query_error_strategy_should_prevail_over_global() {
         String id = "ae5dd05d-4e90-4ce7-bee7-3751750fdeaa";
-        String clientId = "87mpqvd86tskt43h";
-        String clientSecret = "kmysr3rr431h9bx04hyk604jz0wwzr6v4vetgex3hb1u1xgnlrnirea13o31c9dg";
+        String clientId = "THIS_IS_NOT_A_REAL_DATA_PLEASE_DONT_FILE_AN_ISSUE_ABOUT_THIS";
+        String clientSecret = "THIS_IS_NOT_A_REAL_SECRET_PLEASE_DONT_FILE_AN_ISSUE_ABOUT_THIS";
 
         var client = IzanamiClient
                 .newBuilder(
@@ -646,8 +646,8 @@ public class IzanamiClientTest {
     @Test
     public void fail_strategy_should_throw_for_single_feature_request() {
         String id = "ae5dd05d-4e90-4ce7-bee7-3751750fdeaa";
-        String clientId = "87mpqvd86tskt43h";
-        String clientSecret = "kmysr3rr431h9bx04hyk604jz0wwzr6v4vetgex3hb1u1xgnlrnirea13o31c9dg";
+        String clientId = "THIS_IS_NOT_A_REAL_DATA_PLEASE_DONT_FILE_AN_ISSUE_ABOUT_THIS";
+        String clientSecret = "THIS_IS_NOT_A_REAL_SECRET_PLEASE_DONT_FILE_AN_ISSUE_ABOUT_THIS";
 
         var client = IzanamiClient
                 .newBuilder(
@@ -670,8 +670,8 @@ public class IzanamiClientTest {
     @Test
     public void fail_strategy_should_throw_for_multiple_feature_query() {
         String id = "ae5dd05d-4e90-4ce7-bee7-3751750fdeaa";
-        String clientId = "87mpqvd86tskt43h";
-        String clientSecret = "kmysr3rr431h9bx04hyk604jz0wwzr6v4vetgex3hb1u1xgnlrnirea13o31c9dg";
+        String clientId = "THIS_IS_NOT_A_REAL_DATA_PLEASE_DONT_FILE_AN_ISSUE_ABOUT_THIS";
+        String clientSecret = "THIS_IS_NOT_A_REAL_SECRET_PLEASE_DONT_FILE_AN_ISSUE_ABOUT_THIS";
 
         var client = IzanamiClient
                 .newBuilder(
@@ -698,8 +698,8 @@ public class IzanamiClientTest {
         var featureStub1 = Mocks.feature("bar", true).withOverload(overload(true));
         var featureStub2 = Mocks.feature("bar", false).withOverload(overload(true));
         var response = newResponse().withFeature(id1, featureStub1).withFeature(id2, featureStub2);
-        String clientId = "87mpqvd86tskt43h";
-        String clientSecret = "kmysr3rr431h9bx04hyk604jz0wwzr6v4vetgex3hb1u1xgnlrnirea13o31c9dg";
+        String clientId = "THIS_IS_NOT_A_REAL_DATA_PLEASE_DONT_FILE_AN_ISSUE_ABOUT_THIS";
+        String clientSecret = "THIS_IS_NOT_A_REAL_SECRET_PLEASE_DONT_FILE_AN_ISSUE_ABOUT_THIS";
         String url = "/api/v2/features?conditions=true&features=" + id1 + "," + id2;
         String url2 = "/api/v2/features?conditions=true&features=" + id2 + "," + id1;
 
@@ -743,8 +743,8 @@ public class IzanamiClientTest {
         String id2 = "ae5dd05d-4e90-4ce7-bee7-3751750fdeae";
         var featureStub1 = Mocks.feature("bar", true).withOverload(overload(true));
         var response = newResponse().withFeature(id1, featureStub1);
-        String clientId = "87mpqvd86tskt43h";
-        String clientSecret = "kmysr3rr431h9bx04hyk604jz0wwzr6v4vetgex3hb1u1xgnlrnirea13o31c9dg";
+        String clientId = "THIS_IS_NOT_A_REAL_DATA_PLEASE_DONT_FILE_AN_ISSUE_ABOUT_THIS";
+        String clientSecret = "THIS_IS_NOT_A_REAL_SECRET_PLEASE_DONT_FILE_AN_ISSUE_ABOUT_THIS";
         String url = "/api/v2/features?conditions=true&features=" + id1 + "," + id2;
         String url2 = "/api/v2/features?conditions=true&features=" + id2 + "," + id1;
 
@@ -788,8 +788,8 @@ public class IzanamiClientTest {
         String id1 = "ae5dd05d-4e90-4ce7-bee7-3751750fdeaa";
         String id2 = "ae5dd05d-4e90-4ce7-bee7-3751750fdeae";
         String id3 = "ae5dd05d-4e90-4ce7-bee7-3751750fdeao";
-        String clientId = "87mpqvd86tskt43h";
-        String clientSecret = "kmysr3rr431h9bx04hyk604jz0wwzr6v4vetgex3hb1u1xgnlrnirea13o31c9dg";
+        String clientId = "THIS_IS_NOT_A_REAL_DATA_PLEASE_DONT_FILE_AN_ISSUE_ABOUT_THIS";
+        String clientSecret = "THIS_IS_NOT_A_REAL_SECRET_PLEASE_DONT_FILE_AN_ISSUE_ABOUT_THIS";
         String url = "/api/v2/features?conditions=true&features=" + id1 + "," + id2 + "," + id3;
         String url2 = "/api/v2/features?conditions=true&features=" + id1 + "," + id3 + "," + id2;
         String url3 = "/api/v2/features?conditions=true&features=" + id2 + "," + id1 + "," + id3;
@@ -839,8 +839,8 @@ public class IzanamiClientTest {
         var featureStub1 = Mocks.feature("bar", true).withOverload(overload(true)).withOverload("foo", overload(false));
         var featureStub2 = Mocks.feature("bar", true).withOverload(overload(false)).withOverload("foo", overload(true));
         var response = newResponse().withFeature(id1, featureStub1).withFeature(id2, featureStub2);
-        String clientId = "87mpqvd86tskt43h";
-        String clientSecret = "kmysr3rr431h9bx04hyk604jz0wwzr6v4vetgex3hb1u1xgnlrnirea13o31c9dg";
+        String clientId = "THIS_IS_NOT_A_REAL_DATA_PLEASE_DONT_FILE_AN_ISSUE_ABOUT_THIS";
+        String clientSecret = "THIS_IS_NOT_A_REAL_SECRET_PLEASE_DONT_FILE_AN_ISSUE_ABOUT_THIS";
         String url = "/api/v2/features";
 
         mockServer.stubFor(WireMock.get(WireMock.urlPathEqualTo(url))
@@ -910,8 +910,8 @@ public class IzanamiClientTest {
         var featureStub2 = Mocks.feature("bar2", false).withOverload(overload(true)).withOverload("foo", overload(true)).withOverload("foo/bar", overload(false));
         var featureStub3 = Mocks.feature("bar3", true).withOverload(overload(false)).withOverload("foo", overload(true));
         var response = newResponse().withFeature(id1, featureStub1).withFeature(id2, featureStub2).withFeature(id3, featureStub3);
-        String clientId = "87mpqvd86tskt43h";
-        String clientSecret = "kmysr3rr431h9bx04hyk604jz0wwzr6v4vetgex3hb1u1xgnlrnirea13o31c9dg";
+        String clientId = "THIS_IS_NOT_A_REAL_DATA_PLEASE_DONT_FILE_AN_ISSUE_ABOUT_THIS";
+        String clientSecret = "THIS_IS_NOT_A_REAL_SECRET_PLEASE_DONT_FILE_AN_ISSUE_ABOUT_THIS";
         String url = "/api/v2/features";
 
         mockServer.stubFor(WireMock.get(WireMock.urlPathEqualTo(url))
@@ -990,8 +990,8 @@ public class IzanamiClientTest {
         String id = "ae5dd05d-4e90-4ce7-bee7-3751750fdeaa";
         var featureStub = Mocks.feature("bar", true).withOverload(overload(true));
         var response = newResponse().withFeature(id, featureStub);
-        String clientId = "87mpqvd86tskt43h";
-        String clientSecret = "kmysr3rr431h9bx04hyk604jz0wwzr6v4vetgex3hb1u1xgnlrnirea13o31c9dg";
+        String clientId = "THIS_IS_NOT_A_REAL_DATA_PLEASE_DONT_FILE_AN_ISSUE_ABOUT_THIS";
+        String clientSecret = "THIS_IS_NOT_A_REAL_SECRET_PLEASE_DONT_FILE_AN_ISSUE_ABOUT_THIS";
         String url = "/api/v2/features?conditions=true&features=" + id;
 
         mockServer.stubFor(WireMock.get(url)
@@ -1041,8 +1041,8 @@ public class IzanamiClientTest {
         var featureStub1 = Mocks.feature("bar1", true).withOverload(overload(true));
         var featureStub2 = Mocks.feature("bar2", false).withOverload(overload(false));
         var response = newResponse().withFeature(id1, featureStub1).withFeature(id2, featureStub2);
-        String clientId = "87mpqvd86tskt43h";
-        String clientSecret = "kmysr3rr431h9bx04hyk604jz0wwzr6v4vetgex3hb1u1xgnlrnirea13o31c9dg";
+        String clientId = "THIS_IS_NOT_A_REAL_DATA_PLEASE_DONT_FILE_AN_ISSUE_ABOUT_THIS";
+        String clientSecret = "THIS_IS_NOT_A_REAL_SECRET_PLEASE_DONT_FILE_AN_ISSUE_ABOUT_THIS";
         String url = "/api/v2/features";
 
         mockServer.stubFor(WireMock.get(WireMock.urlPathEqualTo(url))
@@ -1096,8 +1096,8 @@ public class IzanamiClientTest {
         String id1 = "ae5dd05d-4e90-4ce7-bee7-3751750fdeaa";
         var featureStub1 = Mocks.feature("bar1", true).withOverload(overload(true));
         var response = newResponse().withFeature(id1, featureStub1);
-        String clientId = "87mpqvd86tskt43h";
-        String clientSecret = "kmysr3rr431h9bx04hyk604jz0wwzr6v4vetgex3hb1u1xgnlrnirea13o31c9dg";
+        String clientId = "THIS_IS_NOT_A_REAL_DATA_PLEASE_DONT_FILE_AN_ISSUE_ABOUT_THIS";
+        String clientSecret = "THIS_IS_NOT_A_REAL_SECRET_PLEASE_DONT_FILE_AN_ISSUE_ABOUT_THIS";
         String url = "/api/v2/features";
 
         mockServer.setGlobalFixedDelay(5000);
@@ -1134,8 +1134,8 @@ public class IzanamiClientTest {
         String id = "ae5dd05d-4e90-4ce7-bee7-3751750fdeaa";
         var featureStub = Mocks.feature("bar1", true).withOverload(overload(true));
         var response = newResponse().withFeature(id, featureStub);
-        String clientId = "87mpqvd86tskt43h";
-        String clientSecret = "kmysr3rr431h9bx04hyk604jz0wwzr6v4vetgex3hb1u1xgnlrnirea13o31c9dg";
+        String clientId = "THIS_IS_NOT_A_REAL_DATA_PLEASE_DONT_FILE_AN_ISSUE_ABOUT_THIS";
+        String clientSecret = "THIS_IS_NOT_A_REAL_SECRET_PLEASE_DONT_FILE_AN_ISSUE_ABOUT_THIS";
         String url = "/api/v2/features";
 
         mockServer.stubFor(WireMock.get(WireMock.urlPathEqualTo(url))
@@ -1190,8 +1190,8 @@ public class IzanamiClientTest {
         String id = "ae5dd05d-4e90-4ce7-bee7-3751750fdeaa";
         var featureStub = Mocks.feature("bar1", true).withOverload(overload(true));
         var response = newResponse().withFeature(id, featureStub);
-        String clientId = "87mpqvd86tskt43h";
-        String clientSecret = "kmysr3rr431h9bx04hyk604jz0wwzr6v4vetgex3hb1u1xgnlrnirea13o31c9dg";
+        String clientId = "THIS_IS_NOT_A_REAL_DATA_PLEASE_DONT_FILE_AN_ISSUE_ABOUT_THIS";
+        String clientSecret = "THIS_IS_NOT_A_REAL_SECRET_PLEASE_DONT_FILE_AN_ISSUE_ABOUT_THIS";
         String url = "/api/v2/features";
 
         mockServer.stubFor(WireMock.get(WireMock.urlPathEqualTo(url))
@@ -1243,8 +1243,8 @@ public class IzanamiClientTest {
         String id = "ae5dd05d-4e90-4ce7-bee7-3751750fdeaa";
         var featureStub = Mocks.feature("bar1", true).withOverload(overload(true));
         var response = newResponse().withFeature(id, featureStub);
-        String clientId = "87mpqvd86tskt43h";
-        String clientSecret = "kmysr3rr431h9bx04hyk604jz0wwzr6v4vetgex3hb1u1xgnlrnirea13o31c9dg";
+        String clientId = "THIS_IS_NOT_A_REAL_DATA_PLEASE_DONT_FILE_AN_ISSUE_ABOUT_THIS";
+        String clientSecret = "THIS_IS_NOT_A_REAL_SECRET_PLEASE_DONT_FILE_AN_ISSUE_ABOUT_THIS";
         String url = "/api/v2/features";
 
         mockServer.stubFor(WireMock.get(WireMock.urlPathEqualTo(url))
@@ -1288,8 +1288,8 @@ public class IzanamiClientTest {
         String id = "ae5dd05d-4e90-4ce7-bee7-3751750fdeaa";
         var featureStub = Mocks.feature("bar1", true).withOverload(overload(true));
         var response = newResponse().withFeature(id, featureStub);
-        String clientId = "87mpqvd86tskt43h";
-        String clientSecret = "kmysr3rr431h9bx04hyk604jz0wwzr6v4vetgex3hb1u1xgnlrnirea13o31c9dg";
+        String clientId = "THIS_IS_NOT_A_REAL_DATA_PLEASE_DONT_FILE_AN_ISSUE_ABOUT_THIS";
+        String clientSecret = "THIS_IS_NOT_A_REAL_SECRET_PLEASE_DONT_FILE_AN_ISSUE_ABOUT_THIS";
         String url = "/api/v2/features";
 
         mockServer.stubFor(WireMock.get(WireMock.urlPathEqualTo(url))
@@ -1328,8 +1328,8 @@ public class IzanamiClientTest {
         String id = "ae5dd05d-4e90-4ce7-bee7-3751750fdeaa";
         var featureStub = Mocks.feature("bar1", true).withOverload(overload(true));
         var response = newResponse().withFeature(id, featureStub);
-        String clientId = "87mpqvd86tskt43h";
-        String clientSecret = "kmysr3rr431h9bx04hyk604jz0wwzr6v4vetgex3hb1u1xgnlrnirea13o31c9dg";
+        String clientId = "THIS_IS_NOT_A_REAL_DATA_PLEASE_DONT_FILE_AN_ISSUE_ABOUT_THIS";
+        String clientSecret = "THIS_IS_NOT_A_REAL_SECRET_PLEASE_DONT_FILE_AN_ISSUE_ABOUT_THIS";
         String url = "/api/v2/features";
 
         mockServer.stubFor(WireMock.get(WireMock.urlPathEqualTo(url))
@@ -1378,8 +1378,8 @@ public class IzanamiClientTest {
         String id = "ae5dd05d-4e90-4ce7-bee7-3751750fdeaa";
         var featureStub = Mocks.feature("bar1", true).withOverload(overload(true));
         var response = newResponse().withFeature(id, featureStub);
-        String clientId = "87mpqvd86tskt43h";
-        String clientSecret = "kmysr3rr431h9bx04hyk604jz0wwzr6v4vetgex3hb1u1xgnlrnirea13o31c9dg";
+        String clientId = "THIS_IS_NOT_A_REAL_DATA_PLEASE_DONT_FILE_AN_ISSUE_ABOUT_THIS";
+        String clientSecret = "THIS_IS_NOT_A_REAL_SECRET_PLEASE_DONT_FILE_AN_ISSUE_ABOUT_THIS";
         String url = "/api/v2/features";
 
         mockServer.stubFor(WireMock.post(WireMock.urlPathEqualTo(url)).withRequestBody(equalToJson("{\"foo\": \"bar\"}"))

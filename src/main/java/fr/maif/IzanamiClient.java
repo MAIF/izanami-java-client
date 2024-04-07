@@ -1,10 +1,9 @@
 package fr.maif;
 
 import fr.maif.http.IzanamiHttpClient;
-import fr.maif.requests.FeatureRequest;
-import fr.maif.requests.FeatureService;
-import fr.maif.requests.IzanamiConnectionInformation;
-import fr.maif.requests.SingleFeatureRequest;
+import fr.maif.requests.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.time.Duration;
 import java.util.*;
@@ -16,6 +15,7 @@ import java.util.stream.Collectors;
  * This should be instantiated only once by application.
  */
 public class IzanamiClient {
+    private static final Logger LOGGER = LoggerFactory.getLogger(IzanamiClient.class);
     private final ClientConfiguration configuration;
     private final FeatureService featureService;
     private CompletableFuture<Void> loader;
@@ -36,12 +36,35 @@ public class IzanamiClient {
                 duration.orElse(Duration.ofSeconds(10L))
         );
 
-        this.featureService = new FeatureService(configuration);
-
-        if(Objects.nonNull(idsToPreload) && !idsToPreload.isEmpty()) {
-            this.loader = featureService.featureStates(FeatureRequest.newFeatureRequest().withFeatures(idsToPreload)).thenAccept(v -> {});
+        if(this.configuration.cacheConfiguration.useServerSentEvent) {
+            LOGGER.info("Izanami client will use SSE to keep in sync");
+            var service = new SSEFeatureService(configuration);
+            if(Objects.nonNull(idsToPreload) && !idsToPreload.isEmpty()) {
+                this.loader = service.featureStates(FeatureRequest.newFeatureRequest().withFeatures(idsToPreload)).thenApply(osef -> null);
+            } else {
+                this.loader = CompletableFuture.completedFuture(null);
+            }
+            this.featureService = service;
         } else {
-            this.loader = CompletableFuture.completedFuture(null);
+            if(configuration.cacheConfiguration.enabled) {
+                LOGGER.info("Izanami client will use polling to keep in sync");
+            } else {
+                LOGGER.info("Cache is disabled, Izanami client will query remote instance every time");
+            }
+            this.featureService = new FetchFeatureService(configuration);
+            if(Objects.nonNull(idsToPreload) && !idsToPreload.isEmpty()) {
+                this.loader = featureService.featureStates(FeatureRequest.newFeatureRequest().withFeatures(idsToPreload)).thenAccept(v -> {});
+            } else {
+                this.loader = CompletableFuture.completedFuture(null);
+            }
+        }
+    }
+
+    public CompletableFuture<Void> close() {
+        if(this.featureService instanceof SSEFeatureService) {
+            return ((SSEFeatureService)this.featureService).disconnect();
+        } else {
+            return CompletableFuture.completedFuture(null);
         }
     }
 

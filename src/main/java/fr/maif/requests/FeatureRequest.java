@@ -32,6 +32,28 @@ public class FeatureRequest {
         return new SingleFeatureRequest(feature);
     }
 
+
+    public FeatureRequest copy() {
+        var req = new FeatureRequest();
+        req.features = new HashMap<>(this.features);
+        req.payload = this.payload;
+        req.user = this.user;
+        req.callTimeout = this.callTimeout;
+        req.context = this.context;
+        req.errorStrategy= this.errorStrategy;
+        req.ignoreCache = this.ignoreCache;
+
+        return req;
+    }
+
+    /**
+     * Remove all features for this request, usefull after cpoying a query, to keep parameters but change features
+     */
+    public FeatureRequest clearFeatures() {
+        this.features = new HashMap<>();
+        return this;
+    }
+
     /**
      * Add or update user for this request
      * @param val user to use for this request

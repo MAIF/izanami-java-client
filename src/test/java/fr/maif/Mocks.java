@@ -4,14 +4,21 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.fasterxml.jackson.databind.node.TextNode;
+import com.fasterxml.jackson.databind.node.ValueNode;
 import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import fr.maif.http.ResponseUtils;
 
+import java.time.Instant;
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.*;
 import java.util.stream.Collectors;
 
 public class Mocks {
+    private static final Random generator = new Random();
     private static final ObjectMapper mapper = new ObjectMapper();
 
     static {
@@ -81,6 +88,30 @@ public class Mocks {
             }
         }
 
+        public String toSSEJson() {
+            var enveloppe = eventEnveloppe("FEATURE_STATES", Optional.empty());
+            try {
+                enveloppe.put("payload", ResponseUtils.mapper.readTree(toJson()));
+            } catch (JsonProcessingException e) {
+                throw new RuntimeException(e);
+            }
+            try {
+                return ResponseUtils.mapper.writeValueAsString(enveloppe);
+            } catch (JsonProcessingException e) {
+                throw new RuntimeException(e);
+            }
+        }
+    }
+
+    public static ObjectNode eventEnveloppe(String type, Optional<LocalDateTime> timestamp) {
+        try {
+            var map = Map.of("_id", generator.nextLong(),
+                    "timestamp", ResponseUtils.mapper.writeValueAsString(timestamp.map(ts -> ts.toInstant(ZoneOffset.UTC).toEpochMilli()).orElseGet(() -> Instant.now().toEpochMilli())),
+                    "type", type);
+            return ResponseUtils.mapper.convertValue(map, ObjectNode.class);
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     public static class MockedFeature {
@@ -109,6 +140,49 @@ public class Mocks {
             } catch (JsonProcessingException e) {
                 throw new RuntimeException(e);
             }
+        }
+
+        public String toUpdatedEvent(String id) {
+            var enveloppe = eventEnveloppe("FEATURE_UPDATED", Optional.empty());
+            enveloppe.put("payload", mapper.convertValue(this, ObjectNode.class));
+            enveloppe.put("id", new TextNode(id));
+            try {
+                return mapper.writeValueAsString(enveloppe);
+            } catch (JsonProcessingException e) {
+                throw new RuntimeException(e);
+            }
+        }
+
+        public String toAddedEvent(String id) {
+            var enveloppe = eventEnveloppe("FEATURE_CREATED", Optional.empty());
+            enveloppe.put("payload", mapper.convertValue(this, ObjectNode.class));
+            enveloppe.put("id", new TextNode(id));
+            try {
+                return mapper.writeValueAsString(enveloppe);
+            } catch (JsonProcessingException e) {
+                throw new RuntimeException(e);
+            }
+        }
+    }
+
+    public static String emptyFeatureStatesEvent() {
+        var enveloppe = eventEnveloppe("FEATURE_STATES", Optional.empty());
+        try {
+            enveloppe.put("payload", mapper.convertValue(new HashMap<>(), ObjectNode.class));
+            return mapper.writeValueAsString(enveloppe);
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public static String featureDeletedEvent(String id) {
+        var enveloppe = eventEnveloppe("FEATURE_DELETED", Optional.empty());
+        enveloppe.put("payload", new TextNode(id));
+
+        try {
+            return mapper.writeValueAsString(enveloppe);
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException(e);
         }
     }
 
