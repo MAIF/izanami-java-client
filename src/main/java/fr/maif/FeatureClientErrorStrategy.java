@@ -5,7 +5,7 @@ import fr.maif.errors.IzanamiException;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
-
+import java.math.BigDecimal;
 /**
  * Strategy to use when one feature activation status can't be fetched or computed locally.
  * Izanami handle errors as follows :
@@ -27,7 +27,11 @@ import java.util.function.Function;
 public abstract class FeatureClientErrorStrategy<T extends FeatureClientErrorStrategy<T>> {
     public boolean lastKnownFallbackAllowed = true;
 
+
     public abstract CompletableFuture<Boolean> handleError(IzanamiError error);
+    public abstract CompletableFuture<String> handleErrorForString(IzanamiError error);
+    public abstract CompletableFuture<BigDecimal> handleErrorForNumber(IzanamiError error);
+
 
     /**
      *
@@ -38,7 +42,6 @@ public abstract class FeatureClientErrorStrategy<T extends FeatureClientErrorStr
         this.lastKnownFallbackAllowed = shouldUseLastKnownStrategy;
         return (T) this;
     }
-
 
     public static NullValueStrategy nullValueStrategy() {
         return new NullValueStrategy();
@@ -57,8 +60,13 @@ public abstract class FeatureClientErrorStrategy<T extends FeatureClientErrorStr
      * @param defaultValue default value to use as activation status
      * @return an error strategy that use provided value as activation status
      */
+    @Deprecated
     public static DefaultValueStrategy defaultValueStrategy(boolean defaultValue) {
-        return new DefaultValueStrategy(defaultValue);
+        return new DefaultValueStrategy(defaultValue, null, null);
+    }
+
+    public static DefaultValueStrategy defaultValueStrategy(boolean defaultValue, String defaultValueForString, BigDecimal defaultValueForNumber) {
+        return new DefaultValueStrategy(defaultValue, defaultValueForString, defaultValueForNumber);
     }
 
     /**
@@ -66,15 +74,34 @@ public abstract class FeatureClientErrorStrategy<T extends FeatureClientErrorStr
      * @param callback function that will be called to compute feature activation status
      * @return an error strategy that calls provided callback to compute activation status
      */
+    @Deprecated
     public static CallbackStrategy callbackStrategy(
             Function<IzanamiError, CompletableFuture<Boolean>>  callback
     ) {
-        return new CallbackStrategy(callback);
+        return new CallbackStrategy(callback, (error) -> CompletableFuture.completedFuture(null), (error) -> CompletableFuture.completedFuture(null));
     }
+
+    public static CallbackStrategy callbackStrategy(
+            Function<IzanamiError, CompletableFuture<Boolean>>  callback,
+            Function<IzanamiError, CompletableFuture<String>> callbackForString,
+            Function<IzanamiError, CompletableFuture<BigDecimal>> callbackForNumber
+    ) {
+        return new CallbackStrategy(callback, callbackForString, callbackForNumber);
+    }   
 
     public static class NullValueStrategy extends FeatureClientErrorStrategy<NullValueStrategy> {
         @Override
         public CompletableFuture<Boolean> handleError(IzanamiError error) {
+            return CompletableFuture.completedFuture(null);
+        }
+
+        @Override
+        public CompletableFuture<String> handleErrorForString(IzanamiError error) {
+            return CompletableFuture.completedFuture(null);
+        }
+
+        @Override
+        public CompletableFuture<BigDecimal> handleErrorForNumber(IzanamiError error) {
             return CompletableFuture.completedFuture(null);
         }
     }
@@ -84,30 +111,69 @@ public abstract class FeatureClientErrorStrategy<T extends FeatureClientErrorStr
         public CompletableFuture<Boolean> handleError(IzanamiError error) {
             return CompletableFuture.failedFuture(new IzanamiException(error.message));
         }
+
+        @Override
+        public CompletableFuture<String> handleErrorForString(IzanamiError error) {
+            return CompletableFuture.failedFuture(new IzanamiException(error.message));
+        }
+
+        @Override
+        public CompletableFuture<BigDecimal> handleErrorForNumber(IzanamiError error) {
+            return CompletableFuture.failedFuture(new IzanamiException(error.message));
+        }
     }
 
     public static class DefaultValueStrategy extends FeatureClientErrorStrategy<DefaultValueStrategy> {
         public final boolean value;
+        public final String valueForString;
+        public final BigDecimal valueForNumber;
 
-        public DefaultValueStrategy(boolean value) {
+        public DefaultValueStrategy(boolean value, String valueForString, BigDecimal valueForNumber) {
             this.value = value;
+            this.valueForString = valueForString;
+            this.valueForNumber = valueForNumber;
         }
 
         @Override
         public CompletableFuture<Boolean> handleError(IzanamiError error) {
             return CompletableFuture.completedFuture(value);
         }
+
+        @Override
+        public CompletableFuture<String> handleErrorForString(IzanamiError error) {
+            return CompletableFuture.completedFuture(valueForString);
+        }
+
+        @Override
+        public CompletableFuture<BigDecimal> handleErrorForNumber(IzanamiError error) {
+            return CompletableFuture.completedFuture(valueForNumber);
+        }
     }
 
     public static class CallbackStrategy extends FeatureClientErrorStrategy<CallbackStrategy> {
-        private Function<IzanamiError, CompletableFuture<Boolean>> callback;
-        public CallbackStrategy(Function<IzanamiError, CompletableFuture<Boolean>> callback) {
+        private final Function<IzanamiError, CompletableFuture<Boolean>> callback;
+        private final Function<IzanamiError, CompletableFuture<String>> callbackForString;
+        private final Function<IzanamiError, CompletableFuture<BigDecimal>> callbackForNumber;
+
+        public CallbackStrategy(Function<IzanamiError, CompletableFuture<Boolean>> callback, Function<IzanamiError, CompletableFuture<String>> callbackForString, Function<IzanamiError, CompletableFuture<BigDecimal>> callbackForNumber) {
             this.callback = callback;
+            this.callbackForString = callbackForString;
+            this.callbackForNumber = callbackForNumber;
         }
 
         @Override
         public CompletableFuture<Boolean> handleError(IzanamiError error) {
             return callback.apply(error);
+        }
+
+        @Override
+        public CompletableFuture<String> handleErrorForString(IzanamiError error) {
+            return callbackForString.apply(error);
+        }
+
+        @Override
+        public CompletableFuture<BigDecimal> handleErrorForNumber(IzanamiError error) {
+            return callbackForNumber.apply(error);
         }
     }
 

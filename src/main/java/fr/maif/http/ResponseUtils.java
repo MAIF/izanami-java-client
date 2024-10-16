@@ -48,7 +48,7 @@ public final class ResponseUtils {
     }
 
 
-    public static Result<Map<String, Feature>> parseFeatureResponse(String json) {
+    public static Result<Map<String, Feature<?>>> parseFeatureResponse(String json) {
         try {
             return Optional.ofNullable(mapper.readValue(json, new TypeReference<Map<String, ObjectNode>>() {}))
                     .map(map -> map.entrySet().stream()
@@ -83,13 +83,22 @@ public final class ResponseUtils {
         }
     }
 
-    public static Optional<Feature> parseFeature(String id, ObjectNode json) {
+    public static Optional<Feature<?>> parseFeature(String id, ObjectNode json) {
         if(json.isNull()) {
             return Optional.empty();
         }
 
         String name = json.get("name").asText();
         String project = json.get("project").asText();
+        JsonNode activeNode = json.get("active");
+        if(activeNode.isBigDecimal()) {
+
+        } else if(activeNode.isTextual()) {
+
+        } else if(activeNode.isBoolean()) {
+        } else {
+            throw new IzanamiException("Invalid type for active field response from Izanami: " + activeNode.getNodeType());
+        }
         boolean active = json.get("active").asBoolean();
         ObjectNode conditions = (ObjectNode) json.get("conditions");
         Map<String, FeatureOverload> overloads = new HashMap<>();

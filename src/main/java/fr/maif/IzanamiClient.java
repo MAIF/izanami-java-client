@@ -95,6 +95,10 @@ public class IzanamiClient {
         return featureService.featureStates(request);
     }
 
+    public CompletableFuture<Boolean> checkStringFeatureValue(SingleFeatureRequest request) {
+        return featureService.featureStates(request);
+    }
+
     public CompletableFuture<Void> isLoaded() {
         return loader;
     }
