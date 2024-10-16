@@ -1,6 +1,7 @@
 package fr.maif.requests;
 
 import fr.maif.FeatureClientErrorStrategy;
+import fr.maif.features.values.BooleanCastStrategy;
 
 import java.time.Duration;
 import java.util.Optional;
@@ -71,6 +72,11 @@ public class SingleFeatureRequest {
 
     public SingleFeatureRequest withPayload(String payload) {
         request.withPayload(payload);
+        return this;
+    }
+
+    public SingleFeatureRequest withBooleanCastStrategy(BooleanCastStrategy castStrategy) {
+        request.withBooleanCastStrategy(castStrategy);
         return this;
     }
 

@@ -1,6 +1,7 @@
 package fr.maif.requests;
 
 import fr.maif.errors.IzanamiException;
+import fr.maif.features.values.BooleanCastStrategy;
 import fr.maif.FeatureClientErrorStrategy;
 
 import java.time.Duration;
@@ -15,10 +16,12 @@ public class FeatureRequest {
     Optional<FeatureClientErrorStrategy<?>> errorStrategy = Optional.empty();
     Optional<Boolean> ignoreCache = Optional.empty();
     Optional<String> context = Optional.empty();
+    Optional<BooleanCastStrategy> castStrategy = Optional.empty();
 
     Optional<Duration> callTimeout = Optional.empty();
     Optional<String> payload = Optional.empty();
     String user = "";
+
 
     /**
      * Create a new multi feature request
@@ -61,6 +64,16 @@ public class FeatureRequest {
      */
     public FeatureRequest withUser(String val) {
         user = val;
+        return this;
+    }
+
+    /**
+     * Add or update cast strategy for this request
+     * @param castStrategy cast strategy to use for this request
+     * @return this request modified with provided cast strategy
+     */
+    public FeatureRequest withBooleanCastStrategy(BooleanCastStrategy castStrategy) {
+        this.castStrategy = Optional.ofNullable(castStrategy);
         return this;
     }
 

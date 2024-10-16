@@ -1,6 +1,7 @@
 package fr.maif.requests;
 
 import fr.maif.FeatureClientErrorStrategy;
+import fr.maif.features.values.BooleanCastStrategy;
 
 import java.util.Optional;
 
@@ -11,6 +12,7 @@ public class SpecificFeatureRequest {
     public final String feature;
     public Optional<Boolean> ignoreCache = Optional.empty();
     public Optional<FeatureClientErrorStrategy<?>> errorStrategy = Optional.empty();
+    public Optional<BooleanCastStrategy> castStrategy = Optional.empty();
 
     private SpecificFeatureRequest(String feature) {
         this.feature = feature;
@@ -42,6 +44,11 @@ public class SpecificFeatureRequest {
      */
     public SpecificFeatureRequest withErrorStrategy(FeatureClientErrorStrategy<?> errorStrategy) {
         this.errorStrategy = Optional.ofNullable(errorStrategy);
+        return this;
+    }
+
+    public SpecificFeatureRequest withBooleanCastStrategy(BooleanCastStrategy castStrategy) {
+        this.castStrategy = Optional.ofNullable(castStrategy);
         return this;
     }
 

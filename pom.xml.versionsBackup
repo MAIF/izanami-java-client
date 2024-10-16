@@ -2,7 +2,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>fr.maif</groupId>
     <artifactId>izanami-client</artifactId>
-    <version>2.1.1-SNAPSHOT</version>
+    <version>2.0.1-SNAPSHOT</version>
     <packaging>jar</packaging>
     <name>${project.groupId}:${project.artifactId}</name>
     <description>Java client for Izanami in version &gt; 2</description>
@@ -127,11 +127,6 @@
 
 
     <dependencies>
-        <dependency>
-            <groupId>dev.openfeature</groupId>
-            <artifactId>sdk</artifactId>
-            <version>1.10.0</version>
-        </dependency>
         <dependency>
             <groupId>ch.qos.logback</groupId>
             <artifactId>logback-classic</artifactId>

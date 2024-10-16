@@ -3,10 +3,12 @@ package fr.maif;
 import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.client.WireMock;
 import fr.maif.errors.IzanamiException;
+import fr.maif.features.values.BooleanCastStrategy;
 import fr.maif.requests.IzanamiConnectionInformation;
 import fr.maif.requests.SpecificFeatureRequest;
 import org.junit.jupiter.api.*;
 
+import java.math.BigDecimal;
 import java.time.Duration;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -52,7 +54,7 @@ public class IzanamiClientTest {
     @Test
     public void should_recompute_feature_locally_when_requested_with_different_parameters() throws InterruptedException {
         String id = "ae5dd05d-4e90-4ce7-bee7-3751750fdeaa";
-        var featureStub = Mocks.feature("bar", false).withOverload(overload(true).withCondition(condition(true).withRule(userListRule("foo"))));
+        var featureStub = Mocks.feature("bar", false).withOverload(overload(true).withCondition(condition().withRule(userListRule("foo"))));
         String stub = newResponse().withFeature(id, featureStub).toJson();
         String clientId = "THIS_IS_NOT_A_REAL_DATA_PLEASE_DONT_FILE_AN_ISSUE_ABOUT_THIS";
         String clientSecret = "THIS_IS_NOT_A_REAL_SECRET_PLEASE_DONT_FILE_AN_ISSUE_ABOUT_THIS";
@@ -526,6 +528,54 @@ public class IzanamiClientTest {
         ).join();
 
         assertThat(result).isTrue();
+    }
+
+    @Test
+    public void string_default_value_should_be_used_when_needed() {
+        String id = "ae5dd05d-4e90-4ce7-bee7-3751750fdeaa";
+        String clientId = "THIS_IS_NOT_A_REAL_DATA_PLEASE_DONT_FILE_AN_ISSUE_ABOUT_THIS";
+        String clientSecret = "THIS_IS_NOT_A_REAL_SECRET_PLEASE_DONT_FILE_AN_ISSUE_ABOUT_THIS";
+
+        var client = IzanamiClient
+                .newBuilder(
+                        connectionInformation()
+                                .withUrl("http://localhost:9999/api")
+                                .withClientId(clientId)
+                                .withClientSecret(clientSecret)
+                ).withCacheConfiguration(
+                        FeatureCacheConfiguration.newBuilder().enabled(true).build()
+                ).withErrorStrategy(defaultValueStrategy(true, "foo", BigDecimal.TEN))
+                .build();
+
+        var result = client.stringValue(
+                newSingleFeatureRequest(id)
+        ).join();
+
+        assertThat(result).isEqualTo("foo");
+    }
+
+    @Test
+    public void number_default_value_should_be_used_when_needed() {
+        String id = "ae5dd05d-4e90-4ce7-bee7-3751750fdeaa";
+        String clientId = "THIS_IS_NOT_A_REAL_DATA_PLEASE_DONT_FILE_AN_ISSUE_ABOUT_THIS";
+        String clientSecret = "THIS_IS_NOT_A_REAL_SECRET_PLEASE_DONT_FILE_AN_ISSUE_ABOUT_THIS";
+
+        var client = IzanamiClient
+                .newBuilder(
+                        connectionInformation()
+                                .withUrl("http://localhost:9999/api")
+                                .withClientId(clientId)
+                                .withClientSecret(clientSecret)
+                ).withCacheConfiguration(
+                        FeatureCacheConfiguration.newBuilder().enabled(true).build()
+                ).withErrorStrategy(defaultValueStrategy(true, "foo", BigDecimal.TEN))
+                .build();
+
+        var result = client.numberValue(
+                newSingleFeatureRequest(id)
+        ).join();
+
+        assertThat(result).isEqualTo(BigDecimal.TEN);
     }
 
     @Test
@@ -1401,7 +1451,396 @@ public class IzanamiClientTest {
                 )
                 .build();
 
-        var result = client.checkFeatureActivation(newSingleFeatureRequest(id).withPayload("{\"foo\": \"bar\"}")).join();
+        var result = client.booleanValue(newSingleFeatureRequest(id).withPayload("{\"foo\": \"bar\"}")).join();
         assertThat(result).isTrue();
+    }
+
+    @Test
+    public void string_valued_feature_should_be_handled_correctly_without_cache()  {
+        String id = "ae5dd05d-4e90-4ce7-bee7-3751750fdeaa";
+        var featureStub = Mocks.feature("bar1", "foo").withOverload(overload("foo", true));
+        var response = newResponse().withFeature(id, featureStub);
+        String clientId = "THIS_IS_NOT_A_REAL_DATA_PLEASE_DONT_FILE_AN_ISSUE_ABOUT_THIS";
+        String clientSecret = "THIS_IS_NOT_A_REAL_SECRET_PLEASE_DONT_FILE_AN_ISSUE_ABOUT_THIS";
+        String url = "/api/v2/features";
+
+        mockServer.stubFor(WireMock.get(WireMock.urlPathEqualTo(url))
+                .withQueryParam("conditions", equalTo("true"))
+                .withQueryParam("features", equalTo(id))
+                .withHeader("Izanami-Client-Id", equalTo(clientId))
+                .withHeader("Izanami-Client-Secret", equalTo(clientSecret))
+                .willReturn(WireMock.ok().withHeader("Content-Type", "application/json")
+                        .withBody(response.toJson())
+                )
+        );
+
+        var client = IzanamiClient
+                .newBuilder(
+                        connectionInformation()
+                                .withUrl("http://localhost:9999/api")
+                                .withClientId(clientId)
+                                .withClientSecret(clientSecret)
+                )
+                .build();
+
+        var result = client.stringValue(newSingleFeatureRequest(id)).join();
+        assertThat(result).isEqualTo("foo");
+    }
+
+
+    @Test
+    public void string_valued_feature_should_return_null_if_disabled()  {
+        String id = "ae5dd05d-4e90-4ce7-bee7-3751750fdeaa";
+        var featureStub = Mocks.feature("bar1", (String)null).withOverload(overload("foo", false));
+        var response = newResponse().withFeature(id, featureStub);
+        String clientId = "THIS_IS_NOT_A_REAL_DATA_PLEASE_DONT_FILE_AN_ISSUE_ABOUT_THIS";
+        String clientSecret = "THIS_IS_NOT_A_REAL_SECRET_PLEASE_DONT_FILE_AN_ISSUE_ABOUT_THIS";
+        String url = "/api/v2/features";
+
+        mockServer.stubFor(WireMock.get(WireMock.urlPathEqualTo(url))
+                .withQueryParam("conditions", equalTo("true"))
+                .withQueryParam("features", equalTo(id))
+                .withHeader("Izanami-Client-Id", equalTo(clientId))
+                .withHeader("Izanami-Client-Secret", equalTo(clientSecret))
+                .willReturn(WireMock.ok().withHeader("Content-Type", "application/json")
+                        .withBody(response.toJson())
+                )
+        );
+
+        var client = IzanamiClient
+                .newBuilder(
+                        connectionInformation()
+                                .withUrl("http://localhost:9999/api")
+                                .withClientId(clientId)
+                                .withClientSecret(clientSecret)
+                )
+                .withCacheConfiguration(
+                        FeatureCacheConfiguration.newBuilder().enabled(true).build()
+                )
+                .build();
+
+        var result = client.stringValue(newSingleFeatureRequest(id)).join();
+        assertThat(result).isEqualTo(null);
+
+        result = client.stringValue(newSingleFeatureRequest(id)).join();
+        assertThat(result).isEqualTo(null);
+    }
+
+    @Test
+    public void string_valued_feature_should_be_handled_correctly_with_cache()  {
+        String id = "ae5dd05d-4e90-4ce7-bee7-3751750fdeaa";
+        var featureStub = Mocks.feature("bar1", "foo").withOverload(overload("bar", true));
+        var response = newResponse().withFeature(id, featureStub);
+        String clientId = "THIS_IS_NOT_A_REAL_DATA_PLEASE_DONT_FILE_AN_ISSUE_ABOUT_THIS";
+        String clientSecret = "THIS_IS_NOT_A_REAL_SECRET_PLEASE_DONT_FILE_AN_ISSUE_ABOUT_THIS";
+        String url = "/api/v2/features";
+
+        mockServer.stubFor(WireMock.get(WireMock.urlPathEqualTo(url))
+                .withQueryParam("conditions", equalTo("true"))
+                .withQueryParam("features", equalTo(id))
+                .withHeader("Izanami-Client-Id", equalTo(clientId))
+                .withHeader("Izanami-Client-Secret", equalTo(clientSecret))
+                .willReturn(WireMock.ok().withHeader("Content-Type", "application/json")
+                        .withBody(response.toJson())
+                )
+        );
+
+        var client = IzanamiClient
+                .newBuilder(
+                        connectionInformation()
+                                .withUrl("http://localhost:9999/api")
+                                .withClientId(clientId)
+                                .withClientSecret(clientSecret)
+                )
+                .withCacheConfiguration(
+                        FeatureCacheConfiguration.newBuilder().enabled(true).build()
+                )
+                .build();
+
+        var result = client.stringValue(newSingleFeatureRequest(id)).join();
+        assertThat(result).isEqualTo("foo");
+
+        var cacheResult = client.stringValue(newSingleFeatureRequest(id)).join();
+        assertThat(cacheResult).isEqualTo("bar");
+
+        var noCacheResult = client.stringValue(newSingleFeatureRequest(id).ignoreCache(true)).join();
+        assertThat(noCacheResult).isEqualTo("foo");
+    }
+
+    @Test
+    public void string_valued_feature_should_be_handled_correctly_with_conditions()  {
+        String id = "ae5dd05d-4e90-4ce7-bee7-3751750fdeaa";
+        var featureStub = Mocks.feature("bar1", "cond")
+                .withOverload(overload("foo", true).withCondition(
+                        condition().withValue("cond").withRule(userListRule("bob"))
+                ));
+        var response = newResponse().withFeature(id, featureStub);
+        String clientId = "THIS_IS_NOT_A_REAL_DATA_PLEASE_DONT_FILE_AN_ISSUE_ABOUT_THIS";
+        String clientSecret = "THIS_IS_NOT_A_REAL_SECRET_PLEASE_DONT_FILE_AN_ISSUE_ABOUT_THIS";
+        String url = "/api/v2/features";
+
+        mockServer.stubFor(WireMock.get(WireMock.urlPathEqualTo(url))
+                .withQueryParam("conditions", equalTo("true"))
+                .withQueryParam("features", equalTo(id))
+                .withQueryParam("user", equalTo("bob"))
+                .withHeader("Izanami-Client-Id", equalTo(clientId))
+                .withHeader("Izanami-Client-Secret", equalTo(clientSecret))
+                .willReturn(WireMock.ok().withHeader("Content-Type", "application/json")
+                        .withBody(response.toJson())
+                )
+        );
+
+        var client = IzanamiClient
+                .newBuilder(
+                        connectionInformation()
+                                .withUrl("http://localhost:9999/api")
+                                .withClientId(clientId)
+                                .withClientSecret(clientSecret)
+                )
+                .withCacheConfiguration(
+                        FeatureCacheConfiguration.newBuilder().enabled(true).build()
+                )
+                .build();
+
+        var result = client.stringValue(newSingleFeatureRequest(id).withUser("bob")).join();
+        assertThat(result).isEqualTo("cond");
+
+        result = client.stringValue(newSingleFeatureRequest(id).withUser("bob")).join();
+        assertThat(result).isEqualTo("cond");
+
+        result = client.stringValue(newSingleFeatureRequest(id).withUser("alice")).join();
+        assertThat(result).isEqualTo("foo");
+
+        result = client.stringValue(newSingleFeatureRequest(id)).join();
+        assertThat(result).isEqualTo("foo");
+    }
+
+    @Test
+    public void string_valued_feature_should_be_cast_if_requested_as_boolean_by_default()  {
+        String id = "ae5dd05d-4e90-4ce7-bee7-3751750fdeaa";
+        var featureStub = Mocks.feature("bar1", "foo")
+                .withOverload(overload("foo", true));
+        var response = newResponse().withFeature(id, featureStub);
+        String clientId = "THIS_IS_NOT_A_REAL_DATA_PLEASE_DONT_FILE_AN_ISSUE_ABOUT_THIS";
+        String clientSecret = "THIS_IS_NOT_A_REAL_SECRET_PLEASE_DONT_FILE_AN_ISSUE_ABOUT_THIS";
+        String url = "/api/v2/features";
+
+        mockServer.stubFor(WireMock.get(WireMock.urlPathEqualTo(url))
+                .withQueryParam("conditions", equalTo("true"))
+                .withQueryParam("features", equalTo(id))
+                .withHeader("Izanami-Client-Id", equalTo(clientId))
+                .withHeader("Izanami-Client-Secret", equalTo(clientSecret))
+                .willReturn(WireMock.ok().withHeader("Content-Type", "application/json")
+                        .withBody(response.toJson())
+                )
+        );
+
+        var client = IzanamiClient
+                .newBuilder(
+                        connectionInformation()
+                                .withUrl("http://localhost:9999/api")
+                                .withClientId(clientId)
+                                .withClientSecret(clientSecret)
+                )
+                .withCacheConfiguration(
+                        FeatureCacheConfiguration.newBuilder().enabled(true).build()
+                )
+                .build();
+
+        var result = client.checkFeatureActivation(newSingleFeatureRequest(id)).join();
+        assertThat(result).isEqualTo(true);
+
+        result = client.checkFeatureActivation(newSingleFeatureRequest(id)).join();
+        assertThat(result).isEqualTo(true);
+
+        featureStub.active = "";
+        mockServer.stubFor(WireMock.get(WireMock.urlPathEqualTo(url))
+                .withQueryParam("conditions", equalTo("true"))
+                .withQueryParam("features", equalTo(id))
+                .withHeader("Izanami-Client-Id", equalTo(clientId))
+                .withHeader("Izanami-Client-Secret", equalTo(clientSecret))
+                .willReturn(WireMock.ok().withHeader("Content-Type", "application/json")
+                        .withBody(response.toJson())
+                )
+        );
+        result = client.checkFeatureActivation(newSingleFeatureRequest(id).ignoreCache(true)).join();
+        assertThat(result).isEqualTo(false);
+        result = client.checkFeatureActivation(newSingleFeatureRequest(id)).join();
+        assertThat(result).isEqualTo(true);
+
+        featureStub.active = "foo";
+        featureStub.conditions.get("").enabled = false;
+        mockServer.stubFor(WireMock.get(WireMock.urlPathEqualTo(url))
+                .withQueryParam("conditions", equalTo("true"))
+                .withQueryParam("features", equalTo(id))
+                .withHeader("Izanami-Client-Id", equalTo(clientId))
+                .withHeader("Izanami-Client-Secret", equalTo(clientSecret))
+                .willReturn(WireMock.ok().withHeader("Content-Type", "application/json")
+                        .withBody(response.toJson())
+                )
+        );
+        result = client.checkFeatureActivation(newSingleFeatureRequest(id).ignoreCache(true)).join();
+        assertThat(result).isEqualTo(true);
+        result = client.checkFeatureActivation(newSingleFeatureRequest(id)).join();
+        assertThat(result).isEqualTo(false);
+    }
+
+    @Test
+    public void string_valued_feature_should_throw_when_requesting_as_boolean_if_cast_is_set_to_strict()  {
+        String id = "ae5dd05d-4e90-4ce7-bee7-3751750fdeaa";
+        var featureStub = Mocks.feature("bar1", "foo")
+                .withOverload(overload("foo", true));
+        var response = newResponse().withFeature(id, featureStub);
+        String clientId = "THIS_IS_NOT_A_REAL_DATA_PLEASE_DONT_FILE_AN_ISSUE_ABOUT_THIS";
+        String clientSecret = "THIS_IS_NOT_A_REAL_SECRET_PLEASE_DONT_FILE_AN_ISSUE_ABOUT_THIS";
+        String url = "/api/v2/features";
+
+        mockServer.stubFor(WireMock.get(WireMock.urlPathEqualTo(url))
+                .withQueryParam("conditions", equalTo("true"))
+                .withQueryParam("features", equalTo(id))
+                .withHeader("Izanami-Client-Id", equalTo(clientId))
+                .withHeader("Izanami-Client-Secret", equalTo(clientSecret))
+                .willReturn(WireMock.ok().withHeader("Content-Type", "application/json")
+                        .withBody(response.toJson())
+                )
+        );
+
+        var client = IzanamiClient
+                .newBuilder(
+                        connectionInformation()
+                                .withUrl("http://localhost:9999/api")
+                                .withClientId(clientId)
+                                .withClientSecret(clientSecret)
+                )
+                .withCacheConfiguration(
+                        FeatureCacheConfiguration.newBuilder().enabled(true).build()
+                )
+                .withBooleanCastStrategy(BooleanCastStrategy.STRICT)
+                .build();
+
+        try {
+            client.checkFeatureActivation(newSingleFeatureRequest(id)).join();
+        } catch(CompletionException ex) {
+            assertThat(ex).hasCauseInstanceOf(IzanamiException.class);
+        }
+    }
+
+    @Test
+    public void multi_type_feature_query_should_work() {
+        String id1 = "ae5dd05d-4e90-4ce7-bee7-3751750fdeaa";
+        String id2 = "ae5dd05d-4e90-4ce7-bee7-3751750fdeae";
+        String id3 = "ae5dd05d-4e90-4ce7-bee7-3751750fdeaf";
+        var featureStub1 = Mocks.feature("bar1", true).withOverload(overload(true));
+        var featureStub2 = Mocks.feature("bar2", "foo").withOverload(overload("foo", false));
+        var featureStub3 = Mocks.feature("bar3", BigDecimal.TEN).withOverload(overload(BigDecimal.TEN, true));
+        var response = newResponse().withFeature(id1, featureStub1).withFeature(id2, featureStub2).withFeature(id3, featureStub3);
+        String clientId = "THIS_IS_NOT_A_REAL_DATA_PLEASE_DONT_FILE_AN_ISSUE_ABOUT_THIS";
+        String clientSecret = "THIS_IS_NOT_A_REAL_SECRET_PLEASE_DONT_FILE_AN_ISSUE_ABOUT_THIS";
+        String url = "/api/v2/features";
+
+        mockServer.stubFor(WireMock.get(WireMock.urlPathEqualTo(url))
+                .withQueryParam("conditions", equalTo("true"))
+                .withQueryParam("features", equalTo(id1 + "," + id2 + "," + id3))
+                .withHeader("Izanami-Client-Id", equalTo(clientId))
+                .withHeader("Izanami-Client-Secret", equalTo(clientSecret))
+                .willReturn(WireMock.ok().withHeader("Content-Type", "application/json")
+                        .withBody(response.toJson())
+                )
+        );
+
+        var client = IzanamiClient
+                .newBuilder(
+                        connectionInformation()
+                                .withUrl("http://localhost:9999/api")
+                                .withClientId(clientId)
+                                .withClientSecret(clientSecret)
+                ).withCacheConfiguration(
+                        FeatureCacheConfiguration.newBuilder().enabled(true).build()
+                ).build();
+
+        var result = client.featureValues(newFeatureRequest().withFeatures(id1, id2, id3)).join();
+        assertThat(result.booleanValue(id1)).isTrue();
+        assertThat(result.stringValue(id2)).isEqualTo("foo");
+        assertThat(result.numberValue(id3)).isEqualTo(BigDecimal.TEN);
+
+        result = client.featureValues(newFeatureRequest().withFeatures(id1, id2, id3)).join();
+        assertThat(result.booleanValue(id1)).isTrue();
+        assertThat(result.stringValue(id2)).isNull();
+        assertThat(result.numberValue(id3)).isEqualTo(BigDecimal.TEN);
+    }
+
+
+    @Test
+    public void check_feature_values_should_return_null_if_feature_is_not_found() {
+        String id1 = "ae5dd05d-4e90-4ce7-bee7-3751750fdeaa";
+        String id2 = "ae5dd05d-4e90-4ce7-bee7-3751750fdeae";
+        String id3 = "ae5dd05d-4e90-4ce7-bee7-3751750fdeaf";
+        var featureStub1 = Mocks.feature("bar1", true).withOverload(overload(true));
+        var response = newResponse().withFeature(id1, featureStub1);
+        String clientId = "THIS_IS_NOT_A_REAL_DATA_PLEASE_DONT_FILE_AN_ISSUE_ABOUT_THIS";
+        String clientSecret = "THIS_IS_NOT_A_REAL_SECRET_PLEASE_DONT_FILE_AN_ISSUE_ABOUT_THIS";
+        String url = "/api/v2/features";
+
+        mockServer.stubFor(WireMock.get(WireMock.urlPathEqualTo(url))
+                .withQueryParam("conditions", equalTo("true"))
+                .withQueryParam("features", equalTo(id1))
+                .withHeader("Izanami-Client-Id", equalTo(clientId))
+                .withHeader("Izanami-Client-Secret", equalTo(clientSecret))
+                .willReturn(WireMock.ok().withHeader("Content-Type", "application/json")
+                        .withBody(response.toJson())
+                )
+        );
+
+        var client = IzanamiClient
+                .newBuilder(
+                        connectionInformation()
+                                .withUrl("http://localhost:9999/api")
+                                .withClientId(clientId)
+                                .withClientSecret(clientSecret)
+                ).build();
+
+        var result = client.featureValues(newFeatureRequest().withFeatures(id1)).join();
+        assertThat(result.booleanValue(id1)).isTrue();
+        assertThat(result.stringValue(id2)).isNull();
+        assertThat(result.numberValue(id3)).isNull();
+    }
+
+    @Test
+    public void boolean_cast_hierarchy_should_be_applied_correctly() {
+        String id1 = "ae5dd05d-4e90-4ce7-bee7-3751750fdeaa";
+        var featureStub1 = Mocks.feature("bar1", "test").withOverload(overload("test", true));
+        var response = newResponse().withFeature(id1, featureStub1);
+        String clientId = "THIS_IS_NOT_A_REAL_DATA_PLEASE_DONT_FILE_AN_ISSUE_ABOUT_THIS";
+        String clientSecret = "THIS_IS_NOT_A_REAL_SECRET_PLEASE_DONT_FILE_AN_ISSUE_ABOUT_THIS";
+        String url = "/api/v2/features";
+
+        mockServer.stubFor(WireMock.get(WireMock.urlPathEqualTo(url))
+                .withQueryParam("conditions", equalTo("true"))
+                .withQueryParam("features", equalTo(id1))
+                .withHeader("Izanami-Client-Id", equalTo(clientId))
+                .withHeader("Izanami-Client-Secret", equalTo(clientSecret))
+                .willReturn(WireMock.ok().withHeader("Content-Type", "application/json")
+                        .withBody(response.toJson())
+                )
+        );
+
+        var client = IzanamiClient
+                .newBuilder(
+                        connectionInformation()
+                                .withUrl("http://localhost:9999/api")
+                                .withClientId(clientId)
+                                .withClientSecret(clientSecret)
+                )
+                .withBooleanCastStrategy(BooleanCastStrategy.STRICT)
+                .build();
+
+        var result = client.featureValues(newFeatureRequest().withFeatures(id1)).join();
+        assertThatThrownBy(() -> result.booleanValue(id1)).isInstanceOf(IzanamiException.class);
+
+        var result2 = client.featureValues(newFeatureRequest().withFeatures(id1).withBooleanCastStrategy(BooleanCastStrategy.LAX)).join();
+        assertThat(result2.booleanValue(id1)).isTrue();
+
+        var result3 = client.featureValues(newFeatureRequest().withFeature(SpecificFeatureRequest.feature(id1).withBooleanCastStrategy(BooleanCastStrategy.STRICT))).join();
+        assertThatThrownBy(() -> result3.booleanValue(id1)).isInstanceOf(IzanamiException.class);
     }
 }

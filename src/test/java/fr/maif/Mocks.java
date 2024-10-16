@@ -11,6 +11,7 @@ import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import fr.maif.http.ResponseUtils;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
@@ -26,8 +27,23 @@ public class Mocks {
         mapper.registerModule(new JavaTimeModule());
         mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
     }
+
     public static MockedFeature feature(String name, boolean active) {
         var f = new MockedFeature();
+        f.name = name;
+        f.active = active;
+        return f;
+    }
+
+    public static StringMockedFeature feature(String name, String active) {
+        var f = new StringMockedFeature();
+        f.name = name;
+        f.active = active;
+        return f;
+    }
+
+    public static NumberMockedFeature feature(String name, BigDecimal active) {
+        var f = new NumberMockedFeature();
         f.name = name;
         f.active = active;
         return f;
@@ -37,10 +53,23 @@ public class Mocks {
         var o = new MockOverload();
         o.enabled = enabled;
         return o;
-
     }
 
-    public static MockCondition condition(boolean enabled) {
+    public static StringMockOverload overload(String value, boolean enabled) {
+        var o = new StringMockOverload();
+        o.value = value;
+        o.enabled = enabled;
+        return o;
+    }
+
+    public static NumberMockOverload overload(BigDecimal value, boolean enabled) {
+        var o = new NumberMockOverload();
+        o.value = value;
+        o.enabled = enabled;
+        return o;
+    }
+
+    public static MockCondition condition() {
         return new MockCondition();
     }
 
@@ -73,9 +102,9 @@ public class Mocks {
 
 
     public static class MockedIzanamiResponse {
-        Map<String, MockedFeature> features = new HashMap<>();
+        Map<String, AbstractMockedFeature> features = new HashMap<>();
 
-        public MockedIzanamiResponse withFeature(String id, MockedFeature feature) {
+        public MockedIzanamiResponse withFeature(String id, AbstractMockedFeature feature) {
             this.features.put(id, feature);
             return this;
         }
@@ -114,23 +143,14 @@ public class Mocks {
         }
     }
 
-    public static class MockedFeature {
+    public static class AbstractMockedFeature<T> {
         public String name;
-        public boolean active;
+        public T active;
         public String project = "default";
         public Map<String, MockOverload> conditions = new HashMap<>();
 
-        public MockedFeature active(boolean active) {
+        public AbstractMockedFeature<T> active(T active) {
             this.active = active;
-            return this;
-        }
-        public MockedFeature withOverload(MockOverload condition) {
-            this.conditions.put("", condition);
-            return this;
-        }
-
-        public MockedFeature withOverload(String context, MockOverload condition) {
-            this.conditions.put(context, condition);
             return this;
         }
 
@@ -164,6 +184,56 @@ public class Mocks {
             }
         }
     }
+
+    public static class MockedFeature extends AbstractMockedFeature<Boolean> {
+        public MockedFeature active(boolean active) {
+            this.active = active;
+            return this;
+        }
+
+        public MockedFeature withOverload(MockOverload condition) {
+            this.conditions.put("", condition);
+            return this;
+        }
+
+        public MockedFeature withOverload(String context, MockOverload condition) {
+            this.conditions.put(context, condition);
+            return this;
+        }
+    }
+
+    public static class StringMockedFeature extends AbstractMockedFeature<String> {
+        public StringMockedFeature active(String active) {
+            this.active = active;
+            return this;
+        }
+        public StringMockedFeature withOverload(StringMockOverload condition) {
+            this.conditions.put("", condition);
+            return this;
+        }
+
+        public StringMockedFeature withOverload(String context, StringMockOverload condition) {
+            this.conditions.put(context, condition);
+            return this;
+        }
+    }
+
+    public static class NumberMockedFeature extends AbstractMockedFeature<BigDecimal> {
+        public NumberMockedFeature active(BigDecimal active) {
+            this.active = active;
+            return this;
+        }
+        public NumberMockedFeature withOverload(NumberMockOverload condition) {
+            this.conditions.put("", condition);
+            return this;
+        }
+
+        public NumberMockedFeature withOverload(String context, NumberMockOverload condition) {
+            this.conditions.put(context, condition);
+            return this;
+        }
+    }
+
 
     public static String emptyFeatureStatesEvent() {
         var enveloppe = eventEnveloppe("FEATURE_STATES", Optional.empty());
@@ -201,8 +271,41 @@ public class Mocks {
             this.conditions = null;
             return this;
         }
+    }
 
 
+    public static class StringMockOverload extends MockOverload {
+        public List<StringMockCondition> conditions = new ArrayList<>();
+        public String value;
+
+        public StringMockOverload withCondition(StringMockCondition condition) {
+            this.conditions.add(condition);
+            return this;
+        }
+
+        public StringMockOverload withScript(String name) {
+            this.wasmConfig = new MockScript(name);
+            this.conditions = null;
+            this.value = null;
+            return this;
+        }
+    }
+
+    public static class NumberMockOverload extends MockOverload {
+        public List<NumberMockCondition> conditions = new ArrayList<>();
+        public BigDecimal value;
+
+        public NumberMockOverload withCondition(NumberMockCondition condition) {
+            this.conditions.add(condition);
+            return this;
+        }
+
+        public NumberMockOverload withScript(String name) {
+            this.wasmConfig = new MockScript(name);
+            this.conditions = null;
+            this.value = null;
+            return this;
+        }
     }
 
     public static class MockScript {
@@ -224,6 +327,48 @@ public class Mocks {
 
         public MockCondition withRule(MockRule rule) {
             this.rule = rule;
+            return this;
+        }
+
+        public StringMockCondition withValue(String value) {
+            var res = new StringMockCondition();
+            res.value = value;
+            res.period = this.period;
+            res.rule = this.rule;
+            return res;
+        }
+
+        public NumberMockCondition withValue(BigDecimal value) {
+            var res = new NumberMockCondition();
+            res.value = value;
+            res.period = this.period;
+            res.rule = this.rule;
+            return res;
+        }
+    }
+
+    public static class StringMockCondition extends MockCondition {
+        public String value;
+        public StringMockCondition withPeriod(MockPeriod period) {
+            super.withPeriod(period);
+            return this;
+        }
+
+        public StringMockCondition withRule(MockRule rule) {
+            super.withRule(rule);
+            return this;
+        }
+    }
+
+    public static class NumberMockCondition extends MockCondition {
+        public BigDecimal value;
+        public NumberMockCondition withPeriod(MockPeriod period) {
+            super.withPeriod(period);
+            return this;
+        }
+
+        public NumberMockCondition withRule(MockRule rule) {
+            super.withRule(rule);
             return this;
         }
     }

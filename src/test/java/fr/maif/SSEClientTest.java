@@ -13,7 +13,6 @@ import java.util.Objects;
 import static com.github.tomakehurst.wiremock.client.WireMock.*;
 import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.options;
 import static fr.maif.Mocks.*;
-import static fr.maif.requests.IzanamiConnectionInformation.connectionInformation;
 import static fr.maif.requests.SingleFeatureRequest.newSingleFeatureRequest;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
@@ -48,8 +47,10 @@ public class SSEClientTest {
     @Test
     public void should_open_connection_on_first_query() {
         String id = "ae5dd05d-4e90-4ce7-bee7-3751750fdeaa";
+        String id2 = "ae5dd05d-4e90-4ce7-bee7-3751750fdeae";
         var featureStub = Mocks.feature("bar", true).withOverload(overload(true));
-        String stub = newResponse().withFeature(id, featureStub).toSSEJson();
+        var stringFeatureStub = Mocks.feature("bar", "foo").withOverload(overload("foo", true));
+        String stub = newResponse().withFeature(id, featureStub).withFeature(id2, stringFeatureStub).toSSEJson();
         String clientId = "THIS_IS_NOT_A_REAL_DATA_PLEASE_DONT_FILE_AN_ISSUE_ABOUT_THIS";
         String clientSecret = "THIS_IS_NOT_A_REAL_SECRET_PLEASE_DONT_FILE_AN_ISSUE_ABOUT_THIS";
 
@@ -63,7 +64,7 @@ public class SSEClientTest {
                 .withQueryParam("conditions", equalTo("true"))
                 .withQueryParam("refreshInterval", equalTo("600"))
                 .withQueryParam("keepAliveInterval", equalTo("25"))
-                .withQueryParam("features", equalTo(id))
+                .withQueryParam("features", equalTo(id+ "," + id2))
                 .withHeader("Izanami-Client-Id", equalTo(clientId))
                 .withHeader("Izanami-Client-Secret", equalTo(clientSecret))
                 .willReturn(okForContentType("text/event-stream", eventStream))
@@ -83,9 +84,10 @@ public class SSEClientTest {
                 )
                 .build();
 
-        var result = client.checkFeatureActivation(SingleFeatureRequest.newSingleFeatureRequest(id)).join();
+        var result = client.featureValues(FeatureRequest.newFeatureRequest().withFeatures(id, id2)).join();
 
-        assertThat(result).isTrue();
+        assertThat(result.booleanValue(id)).isTrue();
+        assertThat(result.stringValue(id2)).isEqualTo("foo");
     }
 
 

@@ -28,7 +28,7 @@ import static fr.maif.requests.IzanamiConnectionInformation.connectionInformatio
 import static java.util.concurrent.TimeUnit.SECONDS;
 
 public class Sandbox {
-    @Test
+    //@Test
     public void foo() throws URISyntaxException, IOException, InterruptedException {
         String clientId = "test_H7mD7i0gV8MtJgXY";
         String clientSecret = "aVUm9dXMp26D3TIlebmwAe5we44kDR0tm83mfwL5zBo09Wy15Bg122IizWZQPOBm";
