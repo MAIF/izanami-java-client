@@ -75,8 +75,8 @@ public class SingleFeatureRequest {
         return this;
     }
 
-    public SingleFeatureRequest withCastStrategy(BooleanCastStrategy castStrategy) {
-        request.withCastStrategy(castStrategy);
+    public SingleFeatureRequest withBooleanCastStrategy(BooleanCastStrategy castStrategy) {
+        request.withBooleanCastStrategy(castStrategy);
         return this;
     }
 

@@ -11,6 +11,7 @@ import org.junit.jupiter.api.*;
 import java.math.BigDecimal;
 import java.time.Duration;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -1719,5 +1720,80 @@ public class IzanamiClientTest {
         assertThat(result.booleanValue(id1)).isTrue();
         assertThat(result.stringValue(id2)).isNull();
         assertThat(result.numberValue(id3)).isEqualTo(BigDecimal.TEN);
+    }
+
+
+    @Test
+    public void check_feature_values_should_return_null_if_feature_is_not_found() {
+        String id1 = "ae5dd05d-4e90-4ce7-bee7-3751750fdeaa";
+        String id2 = "ae5dd05d-4e90-4ce7-bee7-3751750fdeae";
+        String id3 = "ae5dd05d-4e90-4ce7-bee7-3751750fdeaf";
+        var featureStub1 = Mocks.feature("bar1", true).withOverload(overload(true));
+        var response = newResponse().withFeature(id1, featureStub1);
+        String clientId = "THIS_IS_NOT_A_REAL_DATA_PLEASE_DONT_FILE_AN_ISSUE_ABOUT_THIS";
+        String clientSecret = "THIS_IS_NOT_A_REAL_SECRET_PLEASE_DONT_FILE_AN_ISSUE_ABOUT_THIS";
+        String url = "/api/v2/features";
+
+        mockServer.stubFor(WireMock.get(WireMock.urlPathEqualTo(url))
+                .withQueryParam("conditions", equalTo("true"))
+                .withQueryParam("features", equalTo(id1))
+                .withHeader("Izanami-Client-Id", equalTo(clientId))
+                .withHeader("Izanami-Client-Secret", equalTo(clientSecret))
+                .willReturn(WireMock.ok().withHeader("Content-Type", "application/json")
+                        .withBody(response.toJson())
+                )
+        );
+
+        var client = IzanamiClient
+                .newBuilder(
+                        connectionInformation()
+                                .withUrl("http://localhost:9999/api")
+                                .withClientId(clientId)
+                                .withClientSecret(clientSecret)
+                ).build();
+
+        var result = client.checkFeatureValues(newFeatureRequest().withFeatures(id1)).join();
+        assertThat(result.booleanValue(id1)).isTrue();
+        assertThat(result.stringValue(id2)).isNull();
+        assertThat(result.numberValue(id3)).isNull();
+    }
+
+    @Test
+    public void boolean_cast_hierarchy_should_be_applied_correctly() {
+        String id1 = "ae5dd05d-4e90-4ce7-bee7-3751750fdeaa";
+        var featureStub1 = Mocks.feature("bar1", "test").withOverload(overload("test", true));
+        var response = newResponse().withFeature(id1, featureStub1);
+        String clientId = "THIS_IS_NOT_A_REAL_DATA_PLEASE_DONT_FILE_AN_ISSUE_ABOUT_THIS";
+        String clientSecret = "THIS_IS_NOT_A_REAL_SECRET_PLEASE_DONT_FILE_AN_ISSUE_ABOUT_THIS";
+        String url = "/api/v2/features";
+
+        mockServer.stubFor(WireMock.get(WireMock.urlPathEqualTo(url))
+                .withQueryParam("conditions", equalTo("true"))
+                .withQueryParam("features", equalTo(id1))
+                .withHeader("Izanami-Client-Id", equalTo(clientId))
+                .withHeader("Izanami-Client-Secret", equalTo(clientSecret))
+                .willReturn(WireMock.ok().withHeader("Content-Type", "application/json")
+                        .withBody(response.toJson())
+                )
+        );
+
+        var client = IzanamiClient
+                .newBuilder(
+                        connectionInformation()
+                                .withUrl("http://localhost:9999/api")
+                                .withClientId(clientId)
+                                .withClientSecret(clientSecret)
+                )
+                .withBooleanCastStrategy(BooleanCastStrategy.STRICT)
+                .build();
+
+        var result = client.checkFeatureValues(newFeatureRequest().withFeatures(id1)).join();
+        assertThatThrownBy(() -> result.booleanValue(id1)).isInstanceOf(IzanamiException.class);
+
+        var result2 = client.checkFeatureValues(newFeatureRequest().withFeatures(id1).withBooleanCastStrategy(BooleanCastStrategy.LAX)).join();
+        assertThat(result2.booleanValue(id1)).isTrue();
+
+        var result3 = client.checkFeatureValues(newFeatureRequest().withFeature(SpecificFeatureRequest.feature(id1).withBooleanCastStrategy(BooleanCastStrategy.STRICT))).join();
+        assertThatThrownBy(() -> result3.booleanValue(id1)).isInstanceOf(IzanamiException.class);
     }
 }

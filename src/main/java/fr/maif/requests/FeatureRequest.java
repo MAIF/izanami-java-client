@@ -72,7 +72,7 @@ public class FeatureRequest {
      * @param castStrategy cast strategy to use for this request
      * @return this request modified with provided cast strategy
      */
-    public FeatureRequest withCastStrategy(BooleanCastStrategy castStrategy) {
+    public FeatureRequest withBooleanCastStrategy(BooleanCastStrategy castStrategy) {
         this.castStrategy = Optional.ofNullable(castStrategy);
         return this;
     }

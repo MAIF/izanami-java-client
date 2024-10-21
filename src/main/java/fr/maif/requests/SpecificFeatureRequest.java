@@ -47,7 +47,7 @@ public class SpecificFeatureRequest {
         return this;
     }
 
-    public SpecificFeatureRequest withCastStrategy(BooleanCastStrategy castStrategy) {
+    public SpecificFeatureRequest withBooleanCastStrategy(BooleanCastStrategy castStrategy) {
         this.castStrategy = Optional.ofNullable(castStrategy);
         return this;
     }
