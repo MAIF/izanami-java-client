@@ -5,6 +5,10 @@ import com.github.benmanes.caffeine.cache.Caffeine;
 import fr.maif.ClientConfiguration;
 import fr.maif.errors.IzanamiError;
 import fr.maif.features.Feature;
+import fr.maif.features.results.IzanamiResult;
+import fr.maif.features.results.IzanamiResult.Result;
+import fr.maif.features.results.IzanamiResult.Success;
+import fr.maif.features.values.FeatureValue;
 import fr.maif.requests.events.IzanamiEvent;
 import fr.maif.requests.events.SSEClient;
 import org.slf4j.Logger;
@@ -51,12 +55,17 @@ public class SSEFeatureService implements FeatureService {
         }
     }
 
+    public CompletableFuture<Void> disconnect() {
+        this.sseClient.close();
+        return CompletableFuture.completedFuture(null);
+    }
+
     @Override
-    public CompletableFuture<Map<String, Boolean>> featureStates(FeatureRequest request) {
+    public CompletableFuture<IzanamiResult> featureValues(FeatureRequest request) {
         LOGGER.debug("Feature states is requested for {}", String.join(",", request.features.keySet()));
         Set<SpecificFeatureRequest> missingFeatures = new HashSet<>();
         Set<SpecificFeatureRequest> scriptFeatures = new HashSet<>();
-        Map<String, Boolean> activation = new ConcurrentHashMap<>();
+        Map<String, IzanamiResult.Result> activation = new ConcurrentHashMap<>();
 
         request.features.values().forEach(f -> {
             var maybeFeature = cache.getIfPresent(f.feature);
@@ -67,9 +76,9 @@ public class SSEFeatureService implements FeatureService {
                     missingFeatures.add(f);
                 }
             } else {
-                maybeFeature.active(request.context.orElse(null), request.user).ifPresentOrElse(active -> {
+                maybeFeature.value(request.context.orElse(null), request.user).ifPresentOrElse(active -> {
                     LOGGER.debug("Computing activation for {} from cache, result is {}", f.feature, active);
-                    activation.put(f.feature, active);
+                    activation.put(f.feature, new Success((FeatureValue) active));
                 }, () -> scriptFeatures.add(f));
             }
         });
@@ -82,9 +91,9 @@ public class SSEFeatureService implements FeatureService {
             LOGGER.debug("No missing features in cache");
         }
 
-        List<CompletableFuture<Map<String, Boolean>>> results = new ArrayList<>();
+        List<CompletableFuture<Map<String, Result>>> results = new ArrayList<>();
         if (!missingFeatures.isEmpty()) {
-            CompletableFuture<Map<String, Boolean>> missingFuture = new CompletableFuture<>();
+            CompletableFuture<Map<String, Result>> missingFuture = new CompletableFuture<>();
             Duration timeout = request.getTimeout().orElse(configuration.callTimeout);
             missingFuture.completeOnTimeout(new HashMap<>(), timeout.getSeconds(), TimeUnit.SECONDS);
 
@@ -103,14 +112,14 @@ public class SSEFeatureService implements FeatureService {
                     LOGGER.debug("Receiving response for missing features");
                     isFirst.set(false);
                     var states = (IzanamiEvent.FeatureStates) event;
-                    Map<String, Boolean> missingActivations = new HashMap<>();
+                    Map<String, IzanamiResult.Result> missingResults = new HashMap<>();
                     states.features.forEach((key, value) -> {
                         LOGGER.debug("Received {} for feature {}", value.active, key);
                         cache.put(key, value);
-                        missingActivations.put(key, value.active);
+                        missingResults.put(key, new IzanamiResult.Success(value.active));
                     });
 
-                    missingFuture.complete(missingActivations);
+                    missingFuture.complete(missingResults);
                 }
             }).exceptionally(e -> {
                 LOGGER.error("Received exception while requesting missing features", e);
@@ -126,7 +135,7 @@ public class SSEFeatureService implements FeatureService {
                 LOGGER.debug("Some script feature are requested : {}", missingFeatures.stream().map(f -> f.feature).collect(Collectors.joining(",")));
             }
 
-            results.add(underlying.featureStates(request.copy().clearFeatures().withSpecificFeatures(scriptFeatures)));
+            results.add(underlying.featureValues(request.copy().clearFeatures().withSpecificFeatures(scriptFeatures)).thenApply(r -> r.results));
         }
 
         LOGGER.debug("Will wait for {} queries", results.size());
@@ -138,22 +147,22 @@ public class SSEFeatureService implements FeatureService {
                         .forEach(entry -> activation.put(entry.getKey(), entry.getValue()));
             });
             // ConcurrentHashMap does not support null values, therefore we switch to a simple HashMap
-            var activationWithMaybeNulls = new HashMap<String, Boolean>();
+            var activationWithMaybeNulls = new HashMap<String, Result>();
             request.features.values().stream().map(f -> f.feature).forEach(id -> {
                 if (!activation.containsKey(id)) {
                     var errorStrategy = request.errorStrategyFor(id).orElseGet(() -> configuration.errorStrategy);
                     String errorMessage = "Missing feature in Izanami response : " + id + ". Either this feature has been deleted or your key is not authorized for it.";
-                    activationWithMaybeNulls.put(id, errorStrategy.handleError(new IzanamiError(errorMessage)).join());
+                    activationWithMaybeNulls.put(id, new IzanamiResult.Error(errorStrategy, new IzanamiError(errorMessage)));
                 } else {
                     activationWithMaybeNulls.put(id, activation.get(id));
                 }
             });
-            return activationWithMaybeNulls;
+            return new IzanamiResult(activationWithMaybeNulls, configuration.castStrategy, configuration.errorStrategy);
         });
     }
 
-    public CompletableFuture<Void> disconnect() {
-        this.sseClient.close();
-        return CompletableFuture.completedFuture(null);
+    @Override
+    public ClientConfiguration configuration() {
+        return configuration;
     }
 }

@@ -10,6 +10,7 @@ import fr.maif.features.results.IzanamiResult.Error;
 import fr.maif.features.results.IzanamiResult.Result;
 import fr.maif.features.results.IzanamiResult.Success;
 import fr.maif.features.values.FeatureValue;
+import fr.maif.features.values.NullValue;
 import fr.maif.http.HttpRequester;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -22,6 +23,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 import static fr.maif.requests.FeatureRequest.newFeatureRequest;
+
 
 public class FetchFeatureService implements FeatureService {
     protected ClientConfiguration configuration;
@@ -69,12 +71,9 @@ public class FetchFeatureService implements FeatureService {
                 });
     }
 
-    public CompletableFuture<Map<String, Boolean>> featureStates(
-            FeatureRequest request
-    ) {
-        return featureValues(request)
-        .thenApply(result -> result.results.entrySet().stream()
-                .collect(Collectors.toMap(Map.Entry::getKey, e -> e.getValue().booleanValue(request.castStrategy.orElse(configuration.castStrategy)))));
+    @Override
+    public ClientConfiguration configuration() {
+        return configuration;
     }
 
     @Override
@@ -90,9 +89,22 @@ public class FetchFeatureService implements FeatureService {
                     if(shouldIgnoreCache) {
                         missingFeatures.add(f);
                     } else {
-                       Optional<FeatureValue> maybeActivation = Optional.ofNullable(cache.getIfPresent(f.feature))
-                                .flatMap(cachedFeature -> cachedFeature.value(request.context.orElse(null), request.user));
-                        maybeActivation.ifPresentOrElse(active -> activation.put(f.feature, new Success(active)), () -> missingFeatures.add(f));
+                       Optional<Feature> maybeCachedFeature = Optional.ofNullable(cache.getIfPresent(f.feature));
+                       if(maybeCachedFeature.isEmpty()) {
+                           missingFeatures.add(f);
+                       } else {
+                           var feature = maybeCachedFeature.get();
+                           Optional<FeatureValue> value =  feature.value(request.context.orElse(null), request.user);
+                           if(Objects.isNull(value)) {
+                               // this is ugly, but we need to differentiate between a feature that is not present and a feature that is present but has null value
+                               activation.put(f.feature, new Success(new NullValue()));
+                           } else if(value.isEmpty()) {
+                                 missingFeatures.add(f);
+                            } else {
+                                 activation.put(f.feature, new Success(value.get()));
+                            }
+
+                       }
                     }
                 });
         if(LOGGER.isDebugEnabled()) {
@@ -131,7 +143,7 @@ public class FetchFeatureService implements FeatureService {
                                 }
                             });
                         } else {
-                            Map<String, Feature<?>> featuresById = featureResponse.value;
+                            Map<String, Feature> featuresById = featureResponse.value;
                             missingFeatures.forEach(f -> {
                                 if(featuresById.containsKey(f.feature)) {
                                     var feature = featuresById.get(f.feature);

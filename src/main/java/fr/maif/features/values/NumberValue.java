@@ -15,7 +15,7 @@ public class NumberValue implements FeatureValue {
     }
 
     @Override
-    public boolean booleanValue(BooleanCastStrategy castStrategy) {
+    public Boolean booleanValue(BooleanCastStrategy castStrategy) {
         switch (castStrategy) {
             case STRICT:
                 throw new IllegalArgumentException("Cannot convert BigDecimal to boolean in STRICT mode");

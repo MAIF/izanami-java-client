@@ -8,8 +8,8 @@ class StringValueTest {
     @Test
     void testStringValue() {
         StringValue value = new StringValue("test");
-        assertEquals("test", value.stringValue(BooleanCastStrategy.STRICT));
-        assertEquals("test", value.stringValue(BooleanCastStrategy.LAX));
+        assertEquals("test", value.stringValue());
+        assertEquals("test", value.stringValue());
     }
 
     @Test
@@ -32,7 +32,7 @@ class StringValueTest {
     @Test
     void testNumberValueThrowsException() {
         StringValue value = new StringValue("test");
-        assertThrows(IllegalArgumentException.class, () -> value.numberValue(BooleanCastStrategy.STRICT));
-        assertThrows(IllegalArgumentException.class, () -> value.numberValue(BooleanCastStrategy.LAX));
+        assertThrows(IllegalArgumentException.class, () -> value.numberValue());
+        assertThrows(IllegalArgumentException.class, () -> value.numberValue());
     }
 }

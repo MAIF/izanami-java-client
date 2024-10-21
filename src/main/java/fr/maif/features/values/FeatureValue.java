@@ -4,6 +4,6 @@ import java.math.BigDecimal;
 
 public interface FeatureValue {
     String stringValue();
-    boolean booleanValue(BooleanCastStrategy castStrategy);
+    Boolean booleanValue(BooleanCastStrategy castStrategy);
     BigDecimal numberValue();
 }

@@ -58,7 +58,7 @@ public final class HttpRequester {
         return configuration.httpClient.apply(request)
                 .thenApply(resp -> responseMapper.apply(resp.body));
     }
-    public static CompletableFuture<Result<Map<String, Feature<?>>>> performRequest(
+    public static CompletableFuture<Result<Map<String, Feature>>> performRequest(
             ClientConfiguration configuration,
             FeatureRequest request
     ) {

@@ -9,8 +9,8 @@ class NumberValueTest {
     @Test
     void testNumberValue() {
         NumberValue value = new NumberValue(new BigDecimal("42.5"));
-        assertEquals(new BigDecimal("42.5"), value.numberValue(BooleanCastStrategy.STRICT));
-        assertEquals(new BigDecimal("42.5"), value.numberValue(BooleanCastStrategy.LAX));
+        assertEquals(new BigDecimal("42.5"), value.numberValue());
+        assertEquals(new BigDecimal("42.5"), value.numberValue());
     }
 
     @Test
@@ -34,7 +34,7 @@ class NumberValueTest {
     @Test
     void testStringValueThrowsException() {
         NumberValue value = new NumberValue(new BigDecimal("42.5"));
-        assertThrows(IllegalArgumentException.class, () -> value.stringValue(BooleanCastStrategy.STRICT));
-        assertThrows(IllegalArgumentException.class, () -> value.stringValue(BooleanCastStrategy.LAX));
+        assertThrows(IllegalArgumentException.class, value::stringValue);
+        assertThrows(IllegalArgumentException.class, value::stringValue);
     }
 }

@@ -30,6 +30,7 @@ public class ClientConfiguration {
         this.castStrategy = castStrategy;
     }
 
+    @Deprecated
     public ClientConfiguration(
             IzanamiConnectionInformation connectionInformation,
             FeatureClientErrorStrategy errorStrategy,

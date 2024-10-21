@@ -1,5 +1,7 @@
 package fr.maif.features.values;
 
+import fr.maif.errors.IzanamiException;
+
 import java.math.BigDecimal;
 
 public class StringValue implements FeatureValue {
@@ -15,14 +17,14 @@ public class StringValue implements FeatureValue {
     }
 
     @Override
-    public boolean booleanValue(BooleanCastStrategy castStrategy) {
+    public Boolean booleanValue(BooleanCastStrategy castStrategy) {
         switch (castStrategy) {
             case STRICT:
-                throw new IllegalArgumentException("Cannot convert String to boolean in STRICT mode");
+                throw new IzanamiException("Cannot convert String to boolean in STRICT mode");
             case LAX:
                 return value != null && !value.isEmpty();
             default:
-                throw new IllegalArgumentException("Unknown BooleanCastStrategy: " + castStrategy);
+                throw new IzanamiException("Unknown BooleanCastStrategy: " + castStrategy);
         }
     }
 

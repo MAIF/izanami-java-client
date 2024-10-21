@@ -19,15 +19,15 @@ public class IzanamiResult {
     }
 
     public String stringValue(String feature) {
-        return results.getOrDefault(feature, new Error(defaultStrategy, new IzanamiError("This feature hasn't been requested"))).stringValue().join();
+        return results.getOrDefault(feature, new Error(defaultStrategy, new IzanamiError("This feature hasn't been requested"))).stringValue();
     }
 
     public Boolean booleanValue(String feature) {
-        return results.getOrDefault(feature, new Error(defaultStrategy, new IzanamiError("This feature hasn't been requested"))).booleanValue(castStrategy).join();
+        return results.getOrDefault(feature, new Error(defaultStrategy, new IzanamiError("This feature hasn't been requested"))).booleanValue(castStrategy);
     }
 
     public BigDecimal numberValue(String feature) {
-        return results.getOrDefault(feature, new Error(defaultStrategy, new IzanamiError("This feature hasn't been requested"))).numberValue().join();
+        return results.getOrDefault(feature, new Error(defaultStrategy, new IzanamiError("This feature hasn't been requested"))).numberValue();
     }
 
 

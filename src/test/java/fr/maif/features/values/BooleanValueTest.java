@@ -20,14 +20,14 @@ class BooleanValueTest {
     @Test
     void testStringValueThrowsException() {
         BooleanValue value = new BooleanValue(true);
-        assertThrows(IllegalArgumentException.class, () -> value.stringValue(BooleanCastStrategy.STRICT));
-        assertThrows(IllegalArgumentException.class, () -> value.stringValue(BooleanCastStrategy.LAX));
+        assertThrows(IllegalArgumentException.class, value::stringValue);
+        assertThrows(IllegalArgumentException.class, value::stringValue);
     }
 
     @Test
     void testNumberValueThrowsException() {
         BooleanValue value = new BooleanValue(true);
-        assertThrows(IllegalArgumentException.class, () -> value.numberValue(BooleanCastStrategy.STRICT));
-        assertThrows(IllegalArgumentException.class, () -> value.numberValue(BooleanCastStrategy.LAX));
+        assertThrows(IllegalArgumentException.class, value::numberValue);
+        assertThrows(IllegalArgumentException.class, value::numberValue);
     }
 }

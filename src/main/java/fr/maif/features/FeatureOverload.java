@@ -33,7 +33,7 @@ public abstract class FeatureOverload<T extends FeatureValue> {
         @Override
         public Optional<BooleanValue> value(String user, String name) {
             if(!enabled) {
-                return Optional.empty();
+                return Optional.of(new BooleanValue(false));
             }
             if(conditions.isEmpty()) {
                 return Optional.of( new BooleanValue(true));
@@ -96,7 +96,7 @@ public abstract class FeatureOverload<T extends FeatureValue> {
         }
     }
 
-    public static class WasmFeatureOverload extends FeatureOverload {
+    public static class WasmFeatureOverload<T extends FeatureValue> extends FeatureOverload<T> {
         public WasmConfig wasmConfig;
 
         public WasmFeatureOverload(boolean enabled, WasmConfig wasmConfig) {
@@ -105,7 +105,7 @@ public abstract class FeatureOverload<T extends FeatureValue> {
         }
 
         @Override
-        public Optional<FeatureValue> value(String user, String name) {
+        public Optional<T> value(String user, String name) {
             return Optional.empty();
         }
     }

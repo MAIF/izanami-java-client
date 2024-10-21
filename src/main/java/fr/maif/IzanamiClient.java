@@ -1,10 +1,13 @@
 package fr.maif;
 
+import fr.maif.features.results.IzanamiResult;
+import fr.maif.features.values.BooleanCastStrategy;
 import fr.maif.http.IzanamiHttpClient;
 import fr.maif.requests.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.math.BigDecimal;
 import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
@@ -20,6 +23,7 @@ public class IzanamiClient {
     private final FeatureService featureService;
     private CompletableFuture<Void> loader;
 
+    @Deprecated
     public IzanamiClient(
             IzanamiConnectionInformation connectionInformation,
             Optional<FeatureClientErrorStrategy> errorStrategy,
@@ -28,12 +32,25 @@ public class IzanamiClient {
             Optional<Duration> duration,
             Set<String> idsToPreload
     ) {
+        this(connectionInformation, errorStrategy, cacheConfiguration, httpClient, duration, idsToPreload, Optional.empty());
+    }
+
+    public IzanamiClient(
+            IzanamiConnectionInformation connectionInformation,
+            Optional<FeatureClientErrorStrategy> errorStrategy,
+            Optional<FeatureCacheConfiguration> cacheConfiguration,
+            Optional<IzanamiHttpClient> httpClient,
+            Optional<Duration> duration,
+            Set<String> idsToPreload,
+            Optional<BooleanCastStrategy> castStrategy
+    ) {
         this.configuration = new ClientConfiguration(
                 connectionInformation,
                 errorStrategy.orElseGet(FeatureClientErrorStrategy::nullValueStrategy),
                 cacheConfiguration.orElseGet(() -> FeatureCacheConfiguration.newBuilder().enabled(false).build()),
                 httpClient.orElseGet(IzanamiHttpClient.DefaultIzanamiHttpClient::new),
-                duration.orElse(Duration.ofSeconds(10L))
+                duration.orElse(Duration.ofSeconds(10L)),
+                castStrategy.orElse(BooleanCastStrategy.LAX)
         );
 
         if(this.configuration.cacheConfiguration.useServerSentEvent) {
@@ -95,8 +112,16 @@ public class IzanamiClient {
         return featureService.featureStates(request);
     }
 
-    public CompletableFuture<Boolean> checkStringFeatureValue(SingleFeatureRequest request) {
-        return featureService.featureStates(request);
+    public CompletableFuture<String> checkStringFeatureValue(SingleFeatureRequest request) {
+        return featureService.stringFeatureValue(request);
+    }
+
+    public CompletableFuture<BigDecimal> checkNumberFeatureValue(SingleFeatureRequest request) {
+        return featureService.numberFeatureValue(request);
+    }
+
+    public CompletableFuture<IzanamiResult> checkFeatureValues(FeatureRequest request) {
+        return featureService.featureValues(request);
     }
 
     public CompletableFuture<Void> isLoaded() {
@@ -111,6 +136,7 @@ public class IzanamiClient {
         private Optional<IzanamiHttpClient> client = Optional.empty();
         private Optional<Duration> callTimeout = Optional.empty();
         private Set<String> idsToPreload = Collections.emptySet();
+        private Optional<BooleanCastStrategy> castStrategy = Optional.empty();
 
         private IzanamiClientBuilder(IzanamiConnectionInformation connectionInformation) {
             this.connectionInformation = connectionInformation;
@@ -177,6 +203,17 @@ public class IzanamiClient {
         }
 
         /**
+         * Specify boolean cast strategy to use for this client.
+         * This strategy can be overridden both at query and query feature levels.
+         * @param strategy boolean cast strategy to use
+         * @return updated builder
+         */
+        public IzanamiClientBuilder withBooleanCastStrategy(BooleanCastStrategy strategy) {
+            this.castStrategy = Optional.ofNullable(strategy);
+            return this;
+        }
+
+        /**
          * Build izanami client with this builder current information
          * @return a new izanami client
          */
@@ -187,7 +224,8 @@ public class IzanamiClient {
                     cacheConfiguration,
                     client,
                     callTimeout,
-                    idsToPreload
+                    idsToPreload,
+                    castStrategy
             );
         }
     }

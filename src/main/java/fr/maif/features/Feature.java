@@ -46,17 +46,17 @@ public abstract class Feature<T extends FeatureValue> {
     }
 
     public static class StringFeature extends Feature<StringValue> {
-        public StringFeature(String id, String name, String project, String value,
+        public StringFeature(String id, String name, String project, String active,
                 Map<String, FeatureOverload<StringValue>> conditions) {
-            super(id, name, project, new StringValue(value), conditions);
+            super(id, name, project, new StringValue(active), conditions);
         }
     }
 
 
     public static class NumberFeature extends Feature<NumberValue> {
-        public NumberFeature(String id, String name, String project, BigDecimal value,
+        public NumberFeature(String id, String name, String project, BigDecimal active,
                 Map<String, FeatureOverload<NumberValue>> conditions) {
-            super(id, name, project, new NumberValue(value), conditions);
+            super(id, name, project, new NumberValue(active), conditions);
         }
     }
 

@@ -34,11 +34,19 @@ public class ActivationCondition {
         public StringValuedActivationCondition(FeaturePeriod period, ActivationRule rule, String value) {
             super(period, rule, new StringValue(value));
         }
+
+        public static StringValuedActivationCondition fromCondition(ActivationCondition cond, String value) {
+            return new StringValuedActivationCondition(cond.period, cond.rule, value);
+        }
     }
 
     public static class NumberValuedActivationCondition extends ValuedActivationCondition<NumberValue> {
         public NumberValuedActivationCondition(FeaturePeriod period, ActivationRule rule, BigDecimal value) {
             super(period, rule, new NumberValue(value));
+        }
+
+        public static NumberValuedActivationCondition fromCondition(ActivationCondition cond, BigDecimal value) {
+            return new NumberValuedActivationCondition(cond.period, cond.rule, value);
         }
     }
 }

@@ -15,7 +15,7 @@ public class BooleanValue implements FeatureValue {
     }
 
     @Override
-    public boolean booleanValue(BooleanCastStrategy castStrategy) {
+    public Boolean booleanValue(BooleanCastStrategy castStrategy) {
         return value;
     }
 
