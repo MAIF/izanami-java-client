@@ -245,7 +245,7 @@ public final class ResponseUtils {
 
     static Optional<FeatureOverload<StringValue>> parseStringFeatureOverload(ObjectNode node) {
         boolean enabled = node.get("enabled").asBoolean();
-        if (node.has("conditions") && !(node.get("conditions") instanceof NullNode) && node.get("value").isTextual()) {
+        if (node.has("conditions") && !(node.get("conditions") instanceof NullNode) && node.has("value") && node.get("value").isTextual()) {
             List<StringValuedActivationCondition> conditions = StreamSupport
                     .stream(node.get("conditions").spliterator(), false)
                     .map(ResponseUtils::parseStringActivationCondition)
@@ -253,7 +253,7 @@ public final class ResponseUtils {
                     .map(Optional::get)
                     .collect(Collectors.toList());
             return Optional.of(new StringOverload(enabled, conditions, node.get("value").asText()));
-        } else if (node.has("wasmConfig") && !node.get("wasConfig").isNull()) {
+        } else if (node.has("wasmConfig") && node.has("wasConfig") && !node.get("wasConfig").isNull()) {
             String name = node.get("wasmConfig").get("name").asText();
 
             return Optional.of(new WasmFeatureOverload<StringValue>(enabled, new FeatureOverload.WasmConfig(name)));
@@ -265,7 +265,7 @@ public final class ResponseUtils {
 
     static Optional<FeatureOverload<NumberValue>> parseNumberFeatureOverload(ObjectNode node) {
         boolean enabled = node.get("enabled").asBoolean();
-        if (node.has("conditions") && !(node.get("conditions") instanceof NullNode) && node.get("value").isNumber()) {
+        if (node.has("conditions") && !(node.get("conditions") instanceof NullNode) && node.has("value") && node.get("value").isNumber()) {
             List<NumberValuedActivationCondition> conditions = StreamSupport
                     .stream(node.get("conditions").spliterator(), false)
                     .map(ResponseUtils::parseNumberActivationCondition)
@@ -273,7 +273,7 @@ public final class ResponseUtils {
                     .map(Optional::get)
                     .collect(Collectors.toList());
             return Optional.of(new NumberOverload(enabled, conditions, node.get("value").decimalValue()));
-        } else if (node.has("wasmConfig") && !node.get("wasmConfig").isNull()) {
+        } else if (node.has("wasmConfig") && node.has("wasConfig") && !node.get("wasmConfig").isNull()) {
             String name = node.get("wasmConfig").get("name").asText();
 
             return Optional.of(new WasmFeatureOverload<NumberValue>(enabled, new FeatureOverload.WasmConfig(name)));
