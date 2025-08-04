@@ -55,6 +55,18 @@ public class Mocks {
         return o;
     }
 
+    public static NumberMockOverload numberOverload(boolean enabled) {
+        var o = new NumberMockOverload();
+        o.enabled = enabled;
+        return o;
+    }
+
+    public static StringMockOverload stringOverload(boolean enabled) {
+        var o = new StringMockOverload();
+        o.enabled = enabled;
+        return o;
+    }
+
     public static StringMockOverload overload(String value, boolean enabled) {
         var o = new StringMockOverload();
         o.value = value;
@@ -292,6 +304,7 @@ public class Mocks {
     }
 
     public static class NumberMockOverload extends MockOverload {
+        public String resultType = "number";
         public List<NumberMockCondition> conditions = new ArrayList<>();
         public BigDecimal value;
 
