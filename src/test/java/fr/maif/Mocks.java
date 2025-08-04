@@ -287,6 +287,7 @@ public class Mocks {
 
 
     public static class StringMockOverload extends MockOverload {
+        public String resultType = "string";
         public List<StringMockCondition> conditions = new ArrayList<>();
         public String value;
 
