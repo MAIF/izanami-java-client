@@ -1,12 +1,7 @@
 package fr.maif;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.node.ObjectNode;
-import fr.maif.features.Feature;
 import fr.maif.http.ResponseUtils;
 import fr.maif.requests.FeatureRequest;
-import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -30,11 +25,9 @@ import static java.util.concurrent.TimeUnit.SECONDS;
 public class Sandbox {
     //@Test
     public void foo() throws URISyntaxException, IOException, InterruptedException {
-        String clientId = "test_H7mD7i0gV8MtJgXY";
-        String clientSecret = "aVUm9dXMp26D3TIlebmwAe5we44kDR0tm83mfwL5zBo09Wy15Bg122IizWZQPOBm";
-        String f1 = "d64dccb4-06e9-4b99-b857-684f44cdd584";
-        String f2 = "08bd325a-7132-460a-a397-2ca0c7d09a3d";
-        String f3 = "legyacy";
+        String clientId = "tenant_ArfEn0nS2O8uK6La";
+        String clientSecret = "v34NojGKFd2IuPSPhTHyM00VZiJD6yNBJKqZvAiVz3Z4TAzeNmbHOjJnqEspeF0x";
+        String f1 = "e4b0d23e-89da-4ebf-a906-8388ab625816";
 
         var client = IzanamiClient.newBuilder(
                 connectionInformation()
@@ -46,21 +39,17 @@ public class Sandbox {
                 .shouldUseServerSentEvent(true)
                 .withServerSentEventKeepAliveInterval(Duration.ofSeconds(3L))
                 .build()
-        ).withPreloadedFeatures(f3)
-                .withCallTimeout(Duration.ofSeconds(10L))
+        )
         .build();
 
         client.isLoaded().join();
         System.out.println("Client is loaded");
 
-        var result = client.checkFeatureActivations(FeatureRequest.newFeatureRequest().withFeatures(f3)).join();
+        var result = client.booleanValue(FeatureRequest.newSingleFeatureRequest(f1)).join();
+        var result2 = client.booleanValue(FeatureRequest.newSingleFeatureRequest(f1).withContext("dev/bar")).join();
+        var result3 = client.booleanValue(FeatureRequest.newSingleFeatureRequest(f1)).join();
 
-        var strResult = ResponseUtils.mapper.writerWithDefaultPrettyPrinter().writeValueAsString(result);
-        System.out.println(strResult);
-
-        while(true) {
-            Thread.sleep(1000);
-        }
+        System.out.println(result3);
     }
 
 

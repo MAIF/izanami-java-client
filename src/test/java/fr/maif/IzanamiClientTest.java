@@ -2,8 +2,13 @@ package fr.maif;
 
 import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.client.WireMock;
+
+import dev.openfeature.sdk.EvaluationContext;
+import dev.openfeature.sdk.ImmutableContext;
+import dev.openfeature.sdk.Value;
 import fr.maif.errors.IzanamiException;
 import fr.maif.features.values.BooleanCastStrategy;
+import fr.maif.openfeatures.IzanamiOpenFeatureProvider;
 import fr.maif.requests.IzanamiConnectionInformation;
 import fr.maif.requests.SpecificFeatureRequest;
 import org.junit.jupiter.api.*;
@@ -11,6 +16,7 @@ import org.junit.jupiter.api.*;
 import java.math.BigDecimal;
 import java.time.Duration;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -1842,5 +1848,39 @@ public class IzanamiClientTest {
 
         var result3 = client.featureValues(newFeatureRequest().withFeature(SpecificFeatureRequest.feature(id1).withBooleanCastStrategy(BooleanCastStrategy.STRICT))).join();
         assertThatThrownBy(() -> result3.booleanValue(id1)).isInstanceOf(IzanamiException.class);
+    }
+
+    @Test
+    public void open_feature_client_should_work_for_boolean() {
+        String id1 = "ae5dd05d-4e90-4ce7-bee7-3751750fdeaa";
+        var featureStub1 = Mocks.feature("bar1", true);
+        var response = newResponse().withFeature(id1, featureStub1);
+        String clientId = "THIS_IS_NOT_A_REAL_DATA_PLEASE_DONT_FILE_AN_ISSUE_ABOUT_THIS";
+        String clientSecret = "THIS_IS_NOT_A_REAL_SECRET_PLEASE_DONT_FILE_AN_ISSUE_ABOUT_THIS";
+        String url = "/api/v2/features";
+
+        mockServer.stubFor(WireMock.get(WireMock.urlPathEqualTo(url))
+                .withQueryParam("conditions", equalTo("true"))
+                .withQueryParam("features", equalTo(id1))
+                .withHeader("Izanami-Client-Id", equalTo(clientId))
+                .withHeader("Izanami-Client-Secret", equalTo(clientSecret))
+                .willReturn(WireMock.ok().withHeader("Content-Type", "application/json")
+                        .withBody(response.toJson())
+                )
+        );
+
+        var client = IzanamiClient
+                .newBuilder(
+                        connectionInformation()
+                                .withUrl("http://localhost:9999/api")
+                                .withClientId(clientId)
+                                .withClientSecret(clientSecret)
+                )
+                .build();
+
+        IzanamiOpenFeatureProvider openFeatureProvider = new IzanamiOpenFeatureProvider(client);
+
+        var result = openFeatureProvider.getBooleanEvaluation(id1, false, new ImmutableContext());
+        assertThat(result.getValue()).isTrue();
     }
 }
