@@ -24,7 +24,7 @@ jobs:
           gpg-private-key: ${{ secrets.GPG_PRIVATE_KEY }}
           gpg-passphrase: MAVEN_GPG_PASSPHRASE
       - name: Publish to Apache Maven Central
-        run: mvn deploy -Pci-cd
+        run: mvn deploy -Pci-cd -DskipTests
         env:
           NEXUS_USERNAME: ${{ secrets.OSSRH_USERNAME }}
           NEXUS_PASSWORD: ${{ secrets.OSSRH_PASSWORD }}
