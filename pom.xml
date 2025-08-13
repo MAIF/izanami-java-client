@@ -32,6 +32,17 @@
         <tag>v2.0.0-beta1</tag>
     </scm>
 
+    <distributionManagement>
+        <snapshotRepository>
+            <id>ossrh</id>
+            <url>https://central.sonatype.com/repository/maven-snapshots/</url>
+        </snapshotRepository>
+        <repository>
+            <id>ossrh</id>
+            <url>https://ossrh-staging-api.central.sonatype.com/service/local/</url>
+        </repository>
+    </distributionManagement>
+
 
     <developers>
         <developer>
@@ -85,15 +96,6 @@
                 <version>3.0.1</version>
                 <configuration>
                     <tagNameFormat>v@{project.version}</tagNameFormat>
-                </configuration>
-            </plugin>
-            <plugin>
-                <groupId>org.sonatype.central</groupId>
-                <artifactId>central-publishing-maven-plugin</artifactId>
-                <version>0.8.0</version>
-                <extensions>true</extensions>
-                <configuration>
-                    <publishingServerId>central</publishingServerId>
                 </configuration>
             </plugin>
         </plugins>
