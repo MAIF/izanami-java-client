@@ -20,7 +20,7 @@ jobs:
         JAVA_HOME: /usr/lib/jvm/java-11-openjdk/
       with:
         release-branch-name: "main"
-        maven-args: " -Dmaven.deploy.skip=true"
+        maven-args: " -Dmaven.deploy.skip=true -Pnopublish"
         ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
         git-release-bot-name: "Release bot"
         git-release-bot-email: "benjamin.cavy@maif.fr"
