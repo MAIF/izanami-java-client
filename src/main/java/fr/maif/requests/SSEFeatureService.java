@@ -16,6 +16,7 @@ import org.slf4j.LoggerFactory;
 
 import java.time.Duration;
 import java.util.*;
+import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
@@ -122,6 +123,15 @@ public class SSEFeatureService implements FeatureService {
                     missingFuture.complete(missingResults);
                 }
             }).exceptionally(e -> {
+                // On intentional cancellation (disconnect() during reconnect),
+                // don't complete missingFuture with empty map — the new connection's
+                // FEATURE_STATES event can still deliver real data.
+                // completeOnTimeout (above) acts as safety net.
+                if (e instanceof CancellationException ||
+                    (e.getCause() instanceof CancellationException)) {
+                    LOGGER.debug("SSE reconnection cancelled previous connection");
+                    return null;
+                }
                 LOGGER.error("Received exception while requesting missing features", e);
                 missingFuture.complete(new HashMap<>());
                 return null;
