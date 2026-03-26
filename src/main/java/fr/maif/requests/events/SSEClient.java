@@ -23,6 +23,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiConsumer;
@@ -37,8 +38,19 @@ public class SSEClient {
     private final ClientConfiguration clientConfiguration;
     private final HttpClient httpClient;
     private Stream<String> currentConnection;
-    private final AtomicLong connectionId = new AtomicLong(0L);
 
+    /** Incremented by reconnectWith() only — used by SSEFeatureService to match events to the right connection. */
+    private final AtomicLong connectionId = new AtomicLong(0L);
+    /** Incremented on every reconnect() — used to detect stale delayed reconnects and stale thenAccept callbacks. */
+    private final AtomicLong reconnectGeneration = new AtomicLong(0L);
+    /** Tracks consecutive failed reconnect attempts for exponential backoff (5s, 10s, 20s, 40s, 60s cap). */
+    private final AtomicInteger reconnectAttempts = new AtomicInteger(0);
+    private final Object connectionLock = new Object();
+    private final AtomicBoolean closed = new AtomicBoolean(false);
+
+    /** The root sendAsync future — stored separately from queryFuture so disconnect() can cancel the HTTP exchange itself. */
+    private CompletableFuture<HttpResponse<Stream<String>>> rawFuture;
+    /** The terminal future of the chain (rawFuture -> thenAccept -> exceptionally). */
     private CompletableFuture<Void> queryFuture;
     private FeatureRequest request;
     private BiConsumer<Long, IzanamiEvent> consumer;
@@ -63,6 +75,10 @@ public class SSEClient {
                         if (maxToleratedDurationWithoutEvents.compareTo(periodSinceLastEvent) < 0) {
                             LOGGER.error("No event received since {} seconds, will try to disconnect / reconnect", periodSinceLastEvent.toSeconds());
                             reconnect();
+                        } else {
+                            // Connection healthy for a full life probe cycle —
+                            // safe to reset exponential backoff for future reconnects.
+                            reconnectAttempts.set(0);
                         }
                     }
                 },
@@ -71,7 +87,22 @@ public class SSEClient {
                 SECONDS
         );
         this.executorService = Executors.newFixedThreadPool(2);
-        this.httpClient = HttpClient.newBuilder().executor(this.executorService).build();
+        this.httpClient = createHttpClient();
+    }
+
+    /**
+     * Creates a fresh HttpClient. HTTP/1.1 is forced because the JDK's HTTP/2
+     * implementation has known bugs with long-lived SSE streams: streams are not
+     * properly released on close, leading to "too many concurrent streams" errors.
+     * connectTimeout covers the TCP handshake only, not the SSE stream lifetime.
+     */
+    private HttpClient createHttpClient() {
+        return HttpClient.newBuilder()
+                .version(HttpClient.Version.HTTP_1_1)
+                .executor(this.executorService)
+                // TODO make connectTimeout configurable via ClientConfiguration
+                .connectTimeout(Duration.ofSeconds(10))
+                .build();
     }
 
 
@@ -95,18 +126,33 @@ public class SSEClient {
         try {
             HttpRequest.Builder requestBuilder = HttpRequest.newBuilder(new URI(url))
                     .setHeader("Izanami-Client-Id", clientConfiguration.connectionInformation.clientId)
-                    .setHeader("Izanami-Client-Secret", clientConfiguration.connectionInformation.clientSecret)
-                    .timeout(request.getTimeout().orElse(clientConfiguration.callTimeout));
+                    .setHeader("Izanami-Client-Secret", clientConfiguration.connectionInformation.clientSecret);
 
+            Duration responseTimeout = request.getTimeout().orElse(clientConfiguration.callTimeout);
 
             var r = request.getPayload()
                     .map(payload -> requestBuilder.POST(HttpRequest.BodyPublishers.ofString(payload)))
                     .orElseGet(requestBuilder::GET).build();
 
-            LOGGER.debug("Calling {} with a timeout of {} seconds", r.uri().toString(), r.timeout().get().toSeconds());
+            LOGGER.debug("Calling {} with response timeout of {} seconds", r.uri().toString(), responseTimeout.toSeconds());
 
-            this.queryFuture = httpClient.sendAsync(r, HttpResponse.BodyHandlers.ofLines())
+            long myGeneration = reconnectGeneration.get();
+
+            this.rawFuture = httpClient.sendAsync(r, HttpResponse.BodyHandlers.ofLines());
+            this.queryFuture = this.rawFuture
+                    // orTimeout scopes the timeout to the initial HTTP response only.
+                    // Once thenAccept starts (response received), the SSE stream runs
+                    // indefinitely — orTimeout does not affect it.
+                    .orTimeout(responseTimeout.toSeconds(), TimeUnit.SECONDS)
                     .thenAccept(resp -> {
+
+                        // Guard: if reconnect() was called since this doConnect(),
+                        // this connection is stale — don't install it
+                        if (reconnectGeneration.get() != myGeneration) {
+                            LOGGER.debug("Stale connection detected, discarding response");
+                            resp.body().close();
+                            return;
+                        }
 
                         if(resp.statusCode() >= 400) {
                             LOGGER.error("Izanami responded with status code {}", resp.statusCode());
@@ -122,18 +168,63 @@ public class SSEClient {
 
                         this.currentConnection.map(line -> {
                                     var res = sseMachine.addLine(line);
+                                    // Update lastEventDate for any complete SSE event
+                                    // (including keepalives with unrecognized event types)
+                                    // so the life probe knows the connection is alive.
+                                    res.ifPresent(sse -> lastEventDate.set(LocalDateTime.now()));
                                     return res.flatMap(EventService::fromSSE);
                                 })
                                 .flatMap(Optional::stream)
                                 .forEach(evt -> {
-                                    lastEventDate.set(LocalDateTime.now());
                                     consumer.accept(id, evt);
                                 });
                     }).exceptionally(e -> {
                         connected.set(false);
-                        LOGGER.error("An error occured while connecting to sse endpoint : ", e);
-                        CompletableFuture.delayedExecutor(5, SECONDS, executorService).execute(() -> doConnect(request, consumer, id));
-                        throw new RuntimeException(e);
+                        if (closed.get()) {
+                            LOGGER.debug("SSE client is closed, not reconnecting");
+                            return null;
+                        }
+                        if (e instanceof CancellationException ||
+                            (e.getCause() instanceof CancellationException)) {
+                            LOGGER.debug("SSE connection was intentionally cancelled");
+                            return null;
+                        }
+
+                        // Transient errors are network-level failures expected to self-heal:
+                        //   IOException/UncheckedIOException — connection drop, network blip, RST
+                        //   TimeoutException — server slow to respond
+                        // Permanent errors are server-side rejections (401, 403, 404, 500)
+                        // that won't resolve without a config or server-side change.
+                        //
+                        // Both schedule a reconnect (server errors may be temporary),
+                        // but only permanent errors are propagated to the caller so it
+                        // can apply its error strategy immediately. Transient errors
+                        // return null and let the reconnect deliver data silently.
+                        Throwable cause = (e instanceof CompletionException && e.getCause() != null) ? e.getCause() : e;
+                        boolean isTransient = cause instanceof java.io.IOException
+                                || cause instanceof java.io.UncheckedIOException
+                                || cause instanceof java.util.concurrent.TimeoutException;
+
+                        long myGen = reconnectGeneration.get();
+                        long delay = Math.min(5 * (1L << Math.min(reconnectAttempts.getAndIncrement(), 4)), 60);
+                        LOGGER.warn("SSE connection lost (transient={}), will reconnect in {}s: {}", isTransient, delay, e.getMessage());
+                        CompletableFuture.delayedExecutor(delay, SECONDS, executorService)
+                                .execute(() -> {
+                                    if (closed.get()) {
+                                        LOGGER.debug("SSE client closed, skipping reconnect");
+                                    } else if (reconnectGeneration.get() == myGen) {
+                                        reconnect();
+                                    } else {
+                                        LOGGER.debug("Skipping stale reconnect, connection already refreshed");
+                                    }
+                                });
+
+                        if (isTransient) {
+                            return null;
+                        }
+                        // Permanent failure — propagate so caller can react,
+                        // but reconnect is still scheduled above
+                        throw (e instanceof CompletionException) ? (CompletionException) e : new CompletionException(e);
                     });
             return queryFuture;
         } catch (URISyntaxException e) {
@@ -142,17 +233,38 @@ public class SSEClient {
     }
 
     public CompletableFuture<Void> disconnect() {
-        LOGGER.info("Disconnecting from SSE endpoint");
-        if (Objects.nonNull(currentConnection)) {
-            LOGGER.debug("Closing event stream");
-            currentConnection.close();
-        }
+        synchronized (connectionLock) {
+            LOGGER.info("Disconnecting from SSE endpoint");
 
-        connected.set(false);
-        return CompletableFuture.completedFuture(null);
+            // Cancel futures FIRST:
+            // 1. rawFuture.cancel() — if HTTP response hasn't arrived yet,
+            //    this prevents thenAccept from ever executing (no leaked stream reader)
+            // 2. queryFuture.cancel() — completes the terminal stage, so the
+            //    exceptionally handler doesn't fire with IOException when close()
+            //    unblocks the reading thread
+            if (Objects.nonNull(rawFuture)) {
+                rawFuture.cancel(true);
+                rawFuture = null;
+            }
+
+            if (Objects.nonNull(queryFuture)) {
+                queryFuture.cancel(true);
+                queryFuture = null;
+            }
+
+            if (Objects.nonNull(currentConnection)) {
+                LOGGER.debug("Closing event stream");
+                currentConnection.close();
+                currentConnection = null;
+            }
+
+            connected.set(false);
+            return CompletableFuture.completedFuture(null);
+        }
     }
 
     public void close() {
+        closed.set(true);
         disconnect();
         lifeProbeExecutorService.shutdown();
         executorService.shutdown();
@@ -164,26 +276,30 @@ public class SSEClient {
         void apply(Long connectionId, Long eventId, IzanamiEvent event);
     }
     
-    // TODO factorise
     public CompletableFuture<Void> reconnect() {
-        LOGGER.debug("Reconnecting with new feature set...");
-        if (Objects.nonNull(currentConnection)) {
-            LOGGER.debug("Disconnecting");
-            disconnect();
-        } else {
-            LOGGER.debug("No connection opened");
-        }
+        synchronized (connectionLock) {
+            reconnectGeneration.incrementAndGet();
+            LOGGER.debug("Reconnecting...");
+            if (Objects.nonNull(currentConnection) || Objects.nonNull(rawFuture)) {
+                LOGGER.debug("Disconnecting");
+                disconnect();
+            } else {
+                LOGGER.debug("No connection opened");
+            }
 
-        LOGGER.debug("Reconnecting");
-        return doConnect(request, consumer, connectionId.get());
+            LOGGER.debug("Reconnecting");
+            return doConnect(request, consumer, connectionId.get());
+        }
     }
 
     public CompletableFuture<Void> reconnectWith(FeatureRequest request, ReconnectionConsumer consumer) {
-        long nextId = connectionId.incrementAndGet();
-        this.request = request;
-        this.consumer = (evtId, evt) -> consumer.apply(nextId, evtId, evt);
+        synchronized (connectionLock) {
+            long nextId = connectionId.incrementAndGet();
+            this.request = request;
+            this.consumer = (evtId, evt) -> consumer.apply(nextId, evtId, evt);
 
-        return reconnect();
+            return reconnect();
+        }
     }
 
     public static class EventService {
@@ -217,7 +333,7 @@ public class SSEClient {
         private ServerSentEvent.Builder currentBuilder = ServerSentEvent.newBuilder();
 
         public Optional<ServerSentEvent> addLine(String line) {
-            LOGGER.info("LINE {}", line);
+            LOGGER.debug("LINE {}", line);
             if (Objects.isNull(line) || line.isBlank()) {
                 var sse = currentBuilder.build();
                 this.currentBuilder = ServerSentEvent.newBuilder();
