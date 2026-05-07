@@ -7,6 +7,9 @@ import fr.maif.features.values.FeatureValue;
 import java.math.BigDecimal;
 import java.util.Map;
 
+/**
+ * Represent result of multiple flag evaluation.
+ */
 public class IzanamiResult {
     public final Map<String, Result> results;
     private final BooleanCastStrategy castStrategy;
@@ -18,14 +21,34 @@ public class IzanamiResult {
         this.defaultStrategy = defaultStrategy;
     }
 
+    /**
+     * Retrieve string value of the flag with the given id
+     * @param feature feature id
+     * @return string value of given flag. If feature does not have a string value error strategy will be used to determine value to return.
+     */
     public String stringValue(String feature) {
         return results.getOrDefault(feature, new Error(defaultStrategy, new IzanamiError("This feature hasn't been requested"))).stringValue();
     }
 
+
+    /**
+     * Retrieve boolean value of the flag with given id
+     * @param feature feature id
+     * @return boolean value of given flag. If feature does not have a boolean value:
+     * <ul>
+     *     <li>if a LAX BooleanCastStrategy was specified, value will be casted to boolean (empty string, numeric 0 and null are false, everything else is true).</li>
+     *     <li>if STRICT BooleanCastStrategy was specified (or if no strategy was specified) error strategy will be used to determine value to return.</li>
+     * </ul>
+     */
     public Boolean booleanValue(String feature) {
         return results.getOrDefault(feature, new Error(defaultStrategy, new IzanamiError("This feature hasn't been requested"))).booleanValue(castStrategy);
     }
 
+    /**
+     * Retrieve number value of the flag with the given id
+     * @param feature feature id
+     * @return number value of given flag. If feature does not have a number value error strategy will be used to determine value to return.
+     */
     public BigDecimal numberValue(String feature) {
         return results.getOrDefault(feature, new Error(defaultStrategy, new IzanamiError("This feature hasn't been requested"))).numberValue();
     }

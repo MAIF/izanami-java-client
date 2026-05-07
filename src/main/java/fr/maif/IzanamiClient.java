@@ -35,12 +35,22 @@ public class IzanamiClient {
         this(connectionInformation, errorStrategy, cacheConfiguration, httpClient, duration, idsToPreload, Optional.empty());
     }
 
+    /**
+     * Constructor
+     * @param connectionInformation information about remote Izanami instance
+     * @param errorStrategy default error strategy to use in case client fails to fetch remote Izanami. This can be overrided at request level.
+     * @param cacheConfiguration cache configuration to use
+     * @param httpClient httpClient to use
+     * @param callTimeout timeout for remote instance http calls
+     * @param idsToPreload flag ids to preload, preloading id prevent from payin the cost of querying remote Izanami first time flags are needed
+     * @param castStrategy default strategy to use to cast non-boolean values in boolean when needed. Possible values are STRICT (trying to cast non boolean value to boolean value will fail) and LAX (empty string, numeric 0 and null are false, everything else is true).
+     */
     public IzanamiClient(
             IzanamiConnectionInformation connectionInformation,
             Optional<FeatureClientErrorStrategy> errorStrategy,
             Optional<FeatureCacheConfiguration> cacheConfiguration,
             Optional<IzanamiHttpClient> httpClient,
-            Optional<Duration> duration,
+            Optional<Duration> callTimeout,
             Set<String> idsToPreload,
             Optional<BooleanCastStrategy> castStrategy
     ) {
@@ -49,7 +59,7 @@ public class IzanamiClient {
                 errorStrategy.orElseGet(FeatureClientErrorStrategy::nullValueStrategy),
                 cacheConfiguration.orElseGet(() -> FeatureCacheConfiguration.newBuilder().enabled(false).build()),
                 httpClient.orElseGet(IzanamiHttpClient.DefaultIzanamiHttpClient::new),
-                duration.orElse(Duration.ofSeconds(10L)),
+                callTimeout.orElse(Duration.ofSeconds(10L)),
                 castStrategy.orElse(BooleanCastStrategy.LAX)
         );
 
@@ -77,6 +87,10 @@ public class IzanamiClient {
         }
     }
 
+    /**
+     * Close underlying SSE client if SSE client is used, otherwise do nothing.
+     * @return a CompletableFuture that complete when SSE client is closed, or immediately if there is no SSE client
+     */
     public CompletableFuture<Void> close() {
         if(this.featureService instanceof SSEFeatureService) {
             return ((SSEFeatureService)this.featureService).disconnect();
@@ -116,22 +130,52 @@ public class IzanamiClient {
         return featureService.featureStates(request);
     }
 
+    /**
+     * Retrieve string value of the flag given request
+     * @param request request to match
+     * @return a CompletableFuture that will resolve with requested feature value.
+     * If feature does not have a string value error strategy will be used to determine value to return.
+     */
     public CompletableFuture<String> stringValue(SingleFeatureRequest request) {
         return featureService.stringFeatureValue(request);
     }
 
+    /**
+     * Retrieve number value of the flag given request
+     * @param request request to match
+     * @return a CompletableFuture that will resolve with requested feature value.
+     * If feature does not have a number value error strategy will be used to determine value to return.
+     */
     public CompletableFuture<BigDecimal> numberValue(SingleFeatureRequest request) {
         return featureService.numberFeatureValue(request);
     }
 
+    /**
+     * Retrieve boolean value of the flag given request
+     * @param request request to match
+     * @return a CompletableFuture that will resolve with requested feature value. If feature does not have a boolean value:
+     * <ul>
+     *     <li>if a LAX BooleanCastStrategy was specified, value will be casted to boolean (empty string, numeric 0 and null are false, everything else is true).</li>
+     *     <li>if STRICT BooleanCastStrategy was specified (or if no strategy was specified) error strategy will be used to determine value to return.</li>
+     * </ul>
+     */
     public CompletableFuture<Boolean> booleanValue(SingleFeatureRequest request) {
         return featureService.booleanFeatureValue(request);
     }
 
+    /**
+     * Return multiple feature values.
+     * @param request feature request
+     * @return a completable future containing feature values wrapped inside a {@see fr.maif.features.results.IzanamiResult}
+     */
     public CompletableFuture<IzanamiResult> featureValues(FeatureRequest request) {
         return featureService.featureValues(request);
     }
 
+    /**
+     * Indicate when client is loaded. A loaded client has fetch ids to preload (if provided). If no ids were provided, client is ready immediately after its instantiation.
+     * @return a CompletableFuture that resolve when client has loaded id to preload (if any).
+     */
     public CompletableFuture<Void> isLoaded() {
         return loader;
     }
@@ -211,7 +255,8 @@ public class IzanamiClient {
         }
 
         /**
-         * Specify boolean cast strategy to use for this client.
+         * Default strategy to use to cast non-boolean values in boolean when needed.
+         * Possible values are STRICT (trying to cast non-boolean value to boolean value will fail) and LAX (empty string, numeric 0 and null are false, everything else is true).
          * This strategy can be overridden both at query and query feature levels.
          * @param strategy boolean cast strategy to use
          * @return updated builder

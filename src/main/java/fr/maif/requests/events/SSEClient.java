@@ -263,11 +263,16 @@ public class SSEClient {
         }
     }
 
-    public void close() {
+    public CompletableFuture<Void> close() {
         closed.set(true);
-        disconnect();
-        lifeProbeExecutorService.shutdown();
-        executorService.shutdown();
+        return disconnect().handle((useless, error) -> {
+            if(Objects.nonNull(error)) {
+                LOGGER.debug("Failed to disconnect SSE client", error);
+            }
+            lifeProbeExecutorService.shutdown();
+            executorService.shutdown();
+            return useless;
+        });
     }
 
 
