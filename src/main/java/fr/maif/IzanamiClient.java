@@ -166,7 +166,7 @@ public class IzanamiClient {
     /**
      * Return multiple feature values.
      * @param request feature request
-     * @return a completable future containing feature values wrapped inside a {@see fr.maif.features.results.IzanamiResult}
+     * @return a completable future containing feature values
      */
     public CompletableFuture<IzanamiResult> featureValues(FeatureRequest request) {
         return featureService.featureValues(request);
