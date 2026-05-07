@@ -1,0 +1,1 @@
+packageSearchIndex = [{"l":"All Packages","url":"allpackages-index.html"},{"l":"fr.maif"},{"l":"fr.maif.errors"},{"l":"fr.maif.features"},{"l":"fr.maif.features.results"},{"l":"fr.maif.features.values"},{"l":"fr.maif.http"},{"l":"fr.maif.openfeatures"},{"l":"fr.maif.requests"},{"l":"fr.maif.requests.events"}]
