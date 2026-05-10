@@ -56,6 +56,7 @@ public class SSEFeatureService implements FeatureService {
         }
     }
 
+    @Override
     public CompletableFuture<Void> disconnect() {
         return this.sseClient.close();
     }

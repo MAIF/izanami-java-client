@@ -92,11 +92,7 @@ public class IzanamiClient {
      * @return a CompletableFuture that complete when SSE client is closed, or immediately if there is no SSE client
      */
     public CompletableFuture<Void> close() {
-        if(this.featureService instanceof SSEFeatureService) {
-            return ((SSEFeatureService)this.featureService).disconnect();
-        } else {
-            return CompletableFuture.completedFuture(null);
-        }
+        return this.featureService.disconnect();
     }
 
     /**

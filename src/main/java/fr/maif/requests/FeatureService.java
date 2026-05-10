@@ -10,6 +10,7 @@ import fr.maif.features.results.IzanamiResult;
 
 public interface FeatureService {
     ClientConfiguration configuration();
+    CompletableFuture<Void> disconnect();
 
     @Deprecated
     default CompletableFuture<Map<String, Boolean>> featureStates(

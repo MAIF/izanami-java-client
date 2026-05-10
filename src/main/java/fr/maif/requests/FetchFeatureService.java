@@ -16,10 +16,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.*;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 import java.util.stream.Collectors;
 
 import static fr.maif.requests.FeatureRequest.newFeatureRequest;
@@ -29,6 +26,7 @@ public class FetchFeatureService implements FeatureService {
     protected ClientConfiguration configuration;
     private static final Logger LOGGER = LoggerFactory.getLogger(FetchFeatureService.class);
     private final Cache<String, Feature<?>> cache;
+    private final Optional<ScheduledExecutorService> refreshScheduler;
 
     public FetchFeatureService(ClientConfiguration configuration) {
         this.configuration = configuration;
@@ -37,12 +35,15 @@ public class FetchFeatureService implements FeatureService {
 
 
         if(configuration.cacheConfiguration.enabled) {
-            ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
+            var scheduler = Executors.newScheduledThreadPool(1);
             scheduler.scheduleAtFixedRate(
                     this::refreshCache,
                     0,
                     configuration.cacheConfiguration.refreshInterval.getSeconds(), TimeUnit.SECONDS
             );
+            refreshScheduler = Optional.of(scheduler);
+        } else {
+            refreshScheduler = Optional.empty();
         }
     }
 
@@ -74,6 +75,12 @@ public class FetchFeatureService implements FeatureService {
     @Override
     public ClientConfiguration configuration() {
         return configuration;
+    }
+
+    @Override
+    public CompletableFuture<Void> disconnect() {
+        refreshScheduler.ifPresent(ExecutorService::shutdown);
+        return CompletableFuture.completedFuture(null);
     }
 
     @Override
