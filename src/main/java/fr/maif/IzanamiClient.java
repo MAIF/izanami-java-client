@@ -3,6 +3,7 @@ package fr.maif;
 import fr.maif.features.results.IzanamiResult;
 import fr.maif.features.values.BooleanCastStrategy;
 import fr.maif.http.IzanamiHttpClient;
+import fr.maif.http.IzanamiHttpRequest;
 import fr.maif.requests.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -32,7 +33,7 @@ public class IzanamiClient {
             Optional<Duration> duration,
             Set<String> idsToPreload
     ) {
-        this(connectionInformation, errorStrategy, cacheConfiguration, httpClient, duration, idsToPreload, Optional.empty());
+        this(connectionInformation, errorStrategy, cacheConfiguration, httpClient, duration, idsToPreload, Optional.empty(), Optional.empty());
     }
 
     /**
@@ -52,7 +53,8 @@ public class IzanamiClient {
             Optional<IzanamiHttpClient> httpClient,
             Optional<Duration> callTimeout,
             Set<String> idsToPreload,
-            Optional<BooleanCastStrategy> castStrategy
+            Optional<BooleanCastStrategy> castStrategy,
+            Optional<Integer> maxUrlSize
     ) {
         this.configuration = new ClientConfiguration(
                 connectionInformation,
@@ -60,7 +62,8 @@ public class IzanamiClient {
                 cacheConfiguration.orElseGet(() -> FeatureCacheConfiguration.newBuilder().enabled(false).build()),
                 httpClient.orElseGet(IzanamiHttpClient.DefaultIzanamiHttpClient::new),
                 callTimeout.orElse(Duration.ofSeconds(10L)),
-                castStrategy.orElse(BooleanCastStrategy.LAX)
+                castStrategy.orElse(BooleanCastStrategy.LAX),
+                maxUrlSize.orElse(1_800)
         );
 
         if(this.configuration.cacheConfiguration.useServerSentEvent) {
@@ -185,6 +188,7 @@ public class IzanamiClient {
         private Optional<Duration> callTimeout = Optional.empty();
         private Set<String> idsToPreload = Collections.emptySet();
         private Optional<BooleanCastStrategy> castStrategy = Optional.empty();
+        private Optional<Integer> maxUrlSize = Optional.empty();
 
         private IzanamiClientBuilder(IzanamiConnectionInformation connectionInformation) {
             this.connectionInformation = connectionInformation;
@@ -262,6 +266,11 @@ public class IzanamiClient {
             return this;
         }
 
+        public IzanamiClientBuilder withMaxUrlSize(int maxUrlSize) {
+            this.maxUrlSize = Optional.of(maxUrlSize);
+            return this;
+        }
+
         /**
          * Build izanami client with this builder current information
          * @return a new izanami client
@@ -274,7 +283,8 @@ public class IzanamiClient {
                     client,
                     callTimeout,
                     idsToPreload,
-                    castStrategy
+                    castStrategy,
+                    maxUrlSize
             );
         }
     }

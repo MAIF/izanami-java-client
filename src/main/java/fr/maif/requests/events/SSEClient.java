@@ -18,6 +18,7 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -110,7 +111,7 @@ public class SSEClient {
         this.request = request;
         this.consumer = consumer;
         LOGGER.debug("Connecting to remote Izanami SSE endpoint");
-        Map<String, String> searchPartAsMap = HttpRequester.queryParametersAsMap(request);
+        Map<String, String> searchPartAsMap = HttpRequester.queryParametersAsMap(request, false);
         searchPartAsMap.put("refreshInterval", Long.toString(clientConfiguration.cacheConfiguration.refreshInterval.toSeconds()));
         searchPartAsMap.put("keepAliveInterval", Long.toString(clientConfiguration.cacheConfiguration.serverSentEventKeepAliveInterval.toSeconds()));
 
@@ -122,6 +123,20 @@ public class SSEClient {
         if (!searchPart.isBlank()) {
             url = url + "?" + searchPart;
         }
+        boolean urlTooLongForAGet = false;
+        if(url.length() > clientConfiguration.maxUrlSize) {
+            urlTooLongForAGet = true;
+            // TODO factorize this
+            LOGGER.debug("a too long URL request was detected, client will put feature ids in body");
+            url = clientConfiguration.connectionInformation.url + "/v2/_events";
+            searchPartAsMap = HttpRequester.queryParametersAsMap(request, true);;
+            searchPartAsMap.put("refreshInterval", Long.toString(clientConfiguration.cacheConfiguration.refreshInterval.toSeconds()));
+            searchPartAsMap.put("keepAliveInterval", Long.toString(clientConfiguration.cacheConfiguration.serverSentEventKeepAliveInterval.toSeconds()));
+            searchPart = searchPartAsMap.entrySet().stream()
+                    .map(e -> e.getKey() + "=" + e.getValue())
+                    .collect(Collectors.joining("&"));
+            url = url + "?" + searchPart;
+        }
 
         try {
             HttpRequest.Builder requestBuilder = HttpRequest.newBuilder(new URI(url))
@@ -130,9 +145,20 @@ public class SSEClient {
 
             Duration responseTimeout = request.getTimeout().orElse(clientConfiguration.callTimeout);
 
-            var r = request.getPayload()
-                    .map(payload -> requestBuilder.POST(HttpRequest.BodyPublishers.ofString(payload)))
-                    .orElseGet(requestBuilder::GET).build();
+            HttpRequest.Builder rb = null;
+            if(urlTooLongForAGet || request.getPayload().isPresent()) {
+                String body = request.getPayload().orElse("");
+                if(urlTooLongForAGet) {
+                    String requestPart = "{\"features\": [\"" + String.join("\",\"", request.getFeatures())  + "\"] }";
+                    body = "{\"request\": " + requestPart + request.getPayload().map(payload -> ", \"payload\": " + payload).orElse("") + "}";
+                    System.out.println("BODY : " + body);
+                }
+                rb = requestBuilder.setHeader("Content-type", "application/json").POST(HttpRequest.BodyPublishers.ofString(body));
+            } else {
+                rb = requestBuilder.GET();
+            }
+
+            HttpRequest r = rb.build();
 
             LOGGER.debug("Calling {} with response timeout of {} seconds", r.uri().toString(), responseTimeout.toSeconds());
 
@@ -156,6 +182,7 @@ public class SSEClient {
 
                         if(resp.statusCode() >= 400) {
                             LOGGER.error("Izanami responded with status code {}", resp.statusCode());
+                            LOGGER.error("Izanami errors response {}", resp.body().collect(Collectors.toList()));
                             throw new RuntimeException("Failed to connect to Izanami backend");
                         } else {
                             LOGGER.info("Connected to remote Izanami SSE endpoint");

@@ -14,6 +14,27 @@ public class ClientConfiguration {
     public final IzanamiHttpClient httpClient;
     public final Duration callTimeout;
     public final BooleanCastStrategy castStrategy;
+    public final int maxUrlSize;
+
+    public ClientConfiguration(
+            IzanamiConnectionInformation connectionInformation,
+            FeatureClientErrorStrategy errorStrategy,
+            FeatureCacheConfiguration cacheConfiguration,
+            IzanamiHttpClient httpClient,
+            Duration callTimeout,
+            BooleanCastStrategy castStrategy,
+            int maxUrlSize
+    ) {
+        this.connectionInformation = connectionInformation;
+        this.errorStrategy = errorStrategy;
+        this.cacheConfiguration = cacheConfiguration;
+        this.httpClient = httpClient;
+        this.callTimeout = callTimeout;
+        this.castStrategy = castStrategy;
+        this.maxUrlSize = maxUrlSize;
+    }
+
+    @Deprecated
     public ClientConfiguration(
             IzanamiConnectionInformation connectionInformation,
             FeatureClientErrorStrategy errorStrategy,
@@ -28,6 +49,7 @@ public class ClientConfiguration {
         this.httpClient = httpClient;
         this.callTimeout = callTimeout;
         this.castStrategy = castStrategy;
+        this.maxUrlSize = 1_800;
     }
 
     @Deprecated
@@ -44,5 +66,6 @@ public class ClientConfiguration {
         this.httpClient = httpClient;
         this.callTimeout = callTimeout;
         this.castStrategy = BooleanCastStrategy.LAX;
+        this.maxUrlSize = 1_800;
     }
 }

@@ -128,6 +128,7 @@ public class FetchFeatureService implements FeatureService {
                     .withUser(request.user)
                     .withContext(request.context.orElse(null))
                     .withPayload(request.payload.orElse(null));
+
             return HttpRequester.performRequest(configuration, missingRequest)
                     .thenApply(featureResponse -> {
                         if(featureResponse.isError()) {
