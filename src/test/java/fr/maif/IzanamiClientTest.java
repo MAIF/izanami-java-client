@@ -522,7 +522,7 @@ public class IzanamiClientTest {
 
     @Test
     public void should_not_use_cache_if_disabled_url_too_long() {
-        String id = "ae5dd05d-4e90-4ce7-bee7-3751750fdeaa";
+        String id = "ae5dd05d-4e90-4ce7-bee7-3751750fdeaz";
         var featureStub = Mocks.feature("bar", true).withOverload(overload(true));
         var response = newResponse().withFeature(id, featureStub);
         String clientId = "THIS_IS_NOT_A_REAL_DATA_PLEASE_DONT_FILE_AN_ISSUE_ABOUT_THIS";
