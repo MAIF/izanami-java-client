@@ -151,7 +151,6 @@ public class SSEClient {
                 if(urlTooLongForAGet) {
                     String requestPart = "{\"features\": [\"" + String.join("\",\"", request.getFeatures())  + "\"] }";
                     body = "{\"request\": " + requestPart + request.getPayload().map(payload -> ", \"payload\": " + payload).orElse("") + "}";
-                    System.out.println("BODY : " + body);
                 }
                 rb = requestBuilder.setHeader("Content-type", "application/json").POST(HttpRequest.BodyPublishers.ofString(body));
             } else {
