@@ -29,7 +29,7 @@
         <connection>scm:git:git@github.com:MAIF/izanami-java-client.git</connection>
         <developerConnection>scm:git:git@github.com:MAIF/izanami-java-client.git</developerConnection>
         <url>https://github.com/MAIF/izanami-java-client/tree/main</url>
-        <tag>v2.3.3</tag>
+        <tag>HEAD</tag>
     </scm>
 
     <developers>
@@ -42,7 +42,6 @@
     </developers>
 
     <build>
-        <finalName>izanami-java-client</finalName>
         <plugins>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
@@ -105,7 +104,7 @@
                     <plugin>
                         <groupId>org.sonatype.central</groupId>
                         <artifactId>central-publishing-maven-plugin</artifactId>
-                        <version>0.3.0</version>
+                        <version>0.8.0</version>
                         <extensions>true</extensions>
                         <configuration>
                             <publishingServerId>central</publishingServerId>
