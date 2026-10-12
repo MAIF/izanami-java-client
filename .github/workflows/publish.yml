@@ -8,7 +8,7 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
 
     steps:
       - uses: actions/checkout@v3
@@ -29,16 +29,3 @@ jobs:
           MAVEN_USERNAME: ${{ secrets.OSSRH_USERNAME }}
           MAVEN_CENTRAL_TOKEN: ${{ secrets.OSSRH_PASSWORD }}
           MAVEN_GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
-      - name: List staged content
-        if: always()
-        run: |
-          find target/central-staging -type f | sort
-          unzip -l target/central-publishing/central-bundle.zip || true
-      - name: Upload bundle
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: central-bundle
-          path: |
-            target/central-publishing/
-            target/central-staging/
