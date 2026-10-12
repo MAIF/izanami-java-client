@@ -1,3 +1,6 @@
 # Project specific
 target
 .idea/
+.classpath
+.project
+.settings/

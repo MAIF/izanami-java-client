@@ -23,11 +23,22 @@ jobs:
           server-password: MAVEN_CENTRAL_TOKEN
           gpg-private-key: ${{ secrets.GPG_PRIVATE_KEY }}
           gpg-passphrase: MAVEN_GPG_PASSPHRASE
-      - name: Build with Maven
-        run: mvn -B package --file pom.xml -DskipTests
       - name: Publish to Apache Maven Central
-        run: mvn deploy -PsonatypeDeploy
+        run: mvn -B clean deploy -PsonatypeDeploy -DskipTests
         env:
           MAVEN_USERNAME: ${{ secrets.OSSRH_USERNAME }}
           MAVEN_CENTRAL_TOKEN: ${{ secrets.OSSRH_PASSWORD }}
           MAVEN_GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+      - name: List staged content
+        if: always()
+        run: |
+          find target/central-staging -type f | sort
+          unzip -l target/central-publishing/central-bundle.zip || true
+      - name: Upload bundle
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: central-bundle
+          path: |
+            target/central-publishing/
+            target/central-staging/
