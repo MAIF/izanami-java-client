@@ -28,6 +28,11 @@ public final class HttpRequester {
             params.put("features", maybeFeatures);
         }
         request.getContext().ifPresent(ctx -> params.put("context", ctx));
+        var groupPart = String.join(",", request.getGroups());
+
+        if(!groupPart.isBlank()) {
+            params.put("groups", groupPart);
+        }
 
         Optional.ofNullable(request.getUser()).filter(str -> !str.isBlank())
                 .map(user -> params.put("user", user));

@@ -342,15 +342,20 @@ public final class ResponseUtils {
         }
     }
 
-    static Optional<UserList> parseUserList(JsonNode node) {
+    static Optional<UserOrGroupList> parseUserList(JsonNode node) {
         if (node.isNull()) {
             return Optional.empty();
         }
 
-        Set<String> users = StreamSupport.stream(node.get("users").spliterator(), false)
+        var userSpliterator = Optional.ofNullable(node.get("users")).map(Iterable::spliterator).orElseGet(Spliterators::emptySpliterator);
+        Set<String> users = StreamSupport.stream(userSpliterator, false)
                 .map(JsonNode::asText).collect(Collectors.toSet());
 
-        return Optional.of(new UserList(users));
+        var groupSpliterator = Optional.ofNullable(node.get("groups")).map(Iterable::spliterator).orElseGet(Spliterators::emptySpliterator);
+        Set<String> groups = StreamSupport.stream(groupSpliterator, false)
+                .map(JsonNode::asText).collect(Collectors.toSet());
+
+        return Optional.of(new UserOrGroupList(users, groups));
     }
 
     static Optional<UserPercentage> parseUserPercentage(JsonNode node) {

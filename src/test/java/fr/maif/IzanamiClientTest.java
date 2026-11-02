@@ -16,8 +16,10 @@ import org.junit.jupiter.api.*;
 
 import java.math.BigDecimal;
 import java.time.Duration;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeSet;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -3415,5 +3417,78 @@ public class IzanamiClientTest {
 
         var result = openFeatureProvider.getBooleanEvaluation(id1, false, new ImmutableContext());
         assertThat(result.getValue()).isTrue();
+    }
+
+    @Test
+    public void should_send_provided_groups() {
+        String id1 = "ae5dd05d-4e90-4ce7-bee7-3751750fdeaa";
+        var featureStub1 = Mocks.feature("bar1", true);
+        var response = newResponse().withFeature(id1, featureStub1);
+        String clientId = "THIS_IS_NOT_A_REAL_DATA_PLEASE_DONT_FILE_AN_ISSUE_ABOUT_THIS";
+        String clientSecret = "THIS_IS_NOT_A_REAL_SECRET_PLEASE_DONT_FILE_AN_ISSUE_ABOUT_THIS";
+        String url = "/api/v2/features";
+
+        mockServer.stubFor(WireMock.get(WireMock.urlPathEqualTo(url))
+                .withQueryParam("conditions", equalTo("true"))
+                .withQueryParam("groups", equalTo("bar,foo"))
+                .withQueryParam("features", equalTo(id1))
+                .withHeader("Izanami-Client-Id", equalTo(clientId))
+                .withHeader("Izanami-Client-Secret", equalTo(clientSecret))
+                .willReturn(WireMock.ok().withHeader("Content-Type", "application/json")
+                        .withBody(response.toJson())
+                )
+        );
+
+        var client = IzanamiClient
+                .newBuilder(
+                        connectionInformation()
+                                .withUrl("http://localhost:9999/api")
+                                .withClientId(clientId)
+                                .withClientSecret(clientSecret)
+                )
+                .build();
+
+        var groups = new TreeSet<String>();
+        groups.add("foo");
+        groups.add("bar");
+        var result = client.featureValues(newFeatureRequest().withFeatures(id1).withGroups(groups)).join();
+        assertThat(result.booleanValue(id1)).isTrue();
+    }
+
+    @Test
+    public void should_send_provided_groups_url_too_long() {
+        String id1 = "ae5dd05d-4e90-4ce7-bee7-3751750fdeaa";
+        var featureStub1 = Mocks.feature("bar1", true);
+        var response = newResponse().withFeature(id1, featureStub1);
+        String clientId = "THIS_IS_NOT_A_REAL_DATA_PLEASE_DONT_FILE_AN_ISSUE_ABOUT_THIS";
+        String clientSecret = "THIS_IS_NOT_A_REAL_SECRET_PLEASE_DONT_FILE_AN_ISSUE_ABOUT_THIS";
+        String url = "/api/v2/_features";
+
+        mockServer.stubFor(WireMock.post(WireMock.urlPathEqualTo(url))
+                .withQueryParam("conditions", equalTo("true"))
+                .withQueryParam("groups", equalTo("bar,foo"))
+                .withRequestBody(new EqualToJsonPattern("{\"request\": {\"features\": [\"" + id1 + "\"] }}", true, false))
+                .withHeader("Izanami-Client-Id", equalTo(clientId))
+                .withHeader("Izanami-Client-Secret", equalTo(clientSecret))
+                .willReturn(WireMock.ok().withHeader("Content-Type", "application/json")
+                        .withBody(response.toJson())
+                )
+        );
+
+        var client = IzanamiClient
+                .newBuilder(
+                        connectionInformation()
+                                .withUrl("http://localhost:9999/api")
+                                .withClientId(clientId)
+                                .withClientSecret(clientSecret)
+                )
+                .withMaxUrlSize(10)
+                .build();
+
+        var groups = new TreeSet<String>();
+        groups.add("foo");
+        groups.add("bar");
+        var result = client.featureValues(newFeatureRequest().withFeatures(id1).withGroups(groups)).join();
+        assertThat(result.booleanValue(id1)).isTrue();
     }
 }

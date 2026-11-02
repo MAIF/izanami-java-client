@@ -21,6 +21,7 @@ public class FeatureRequest {
     Optional<Duration> callTimeout = Optional.empty();
     Optional<String> payload = Optional.empty();
     String user = "";
+    Set<String> groups = new HashSet<>();
 
 
     /**
@@ -45,6 +46,7 @@ public class FeatureRequest {
         req.context = this.context;
         req.errorStrategy= this.errorStrategy;
         req.ignoreCache = this.ignoreCache;
+        req.groups = this.groups;
 
         return req;
     }
@@ -64,6 +66,16 @@ public class FeatureRequest {
      */
     public FeatureRequest withUser(String val) {
         user = val;
+        return this;
+    }
+
+    /**
+     * Add or update groups for this request
+     * @param val groups to use for this request
+     * @return this request modified with provided groups
+     */
+    public FeatureRequest withGroups(Set<String> val) {
+        groups = val;
         return this;
     }
 
@@ -219,6 +231,14 @@ public class FeatureRequest {
      */
     public String getUser() {
         return user;
+    }
+
+    /**
+     * Groups for this request
+     * @return groups for this request
+     */
+    public Set<String> getGroups() {
+        return groups;
     }
 
     /**

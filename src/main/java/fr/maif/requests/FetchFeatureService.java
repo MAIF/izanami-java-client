@@ -101,7 +101,7 @@ public class FetchFeatureService implements FeatureService {
                            missingFeatures.add(f);
                        } else {
                            var feature = maybeCachedFeature.get();
-                           Optional<FeatureValue> value =  feature.value(request.context.orElse(null), request.user);
+                           Optional<FeatureValue> value =  feature.value(request.context.orElse(null), request.user, request.groups);
                            if(Objects.isNull(value)) {
                                // this is ugly, but we need to differentiate between a feature that is not present and a feature that is present but has null value
                                activation.put(f.feature, new Success(new NullValue()));
@@ -126,6 +126,7 @@ public class FetchFeatureService implements FeatureService {
                     .withErrorStrategy(request.errorStrategy.orElse(null))
                     .withCallTimeout(request.getTimeout().orElse(null))
                     .withUser(request.user)
+                    .withGroups(request.groups)
                     .withContext(request.context.orElse(null))
                     .withPayload(request.payload.orElse(null));
 
@@ -140,7 +141,7 @@ public class FetchFeatureService implements FeatureService {
                                     activation.put(f.feature, new Error(errorStrategy, new IzanamiError(errorMsg)));
                                 } else {
                                     Result res = Optional.ofNullable(cache.getIfPresent(f.feature))
-                                            .flatMap(feat -> feat.value(missingRequest.context.orElse(null), missingRequest.user))
+                                            .flatMap(feat -> feat.value(missingRequest.context.orElse(null), missingRequest.user, missingRequest.groups))
                                             .map(value -> {
                                                 Result r = new Success(value);
                                                 return r;
@@ -165,7 +166,7 @@ public class FetchFeatureService implements FeatureService {
                                         activation.put(f.feature, new Error(errorStrategy, new IzanamiError(errorMessage)));
                                     } else {
                                         Result res = Optional.ofNullable(cache.getIfPresent(f.feature))
-                                                .flatMap(feat -> feat.value(request.context.orElse(null), request.user))
+                                                .flatMap(feat -> feat.value(request.context.orElse(null), request.user, request.groups))
                                                 .map(value -> {
                                                     Result r = new Success(value);
                                                     return r;
@@ -188,7 +189,7 @@ public class FetchFeatureService implements FeatureService {
                             } else {
                             
                                 Result res = Optional.ofNullable(cache.getIfPresent(f.feature))
-                                .flatMap(feat -> feat.value(request.context.orElse(null), request.user))
+                                .flatMap(feat -> feat.value(request.context.orElse(null), request.user, request.groups))
                                     .map(value -> {
                                         Result r = new Success(value);
                                         return r;

@@ -5,6 +5,7 @@ import fr.maif.features.values.BooleanCastStrategy;
 
 import java.time.Duration;
 import java.util.Optional;
+import java.util.Set;
 
 /**
  * This class is a data container used to represent query for a single feature
@@ -37,6 +38,16 @@ public class SingleFeatureRequest {
      */
     public SingleFeatureRequest withUser(String val) {
         request.user = val;
+        return this;
+    }
+
+    /**
+     * Add or update groups for this request
+     * @param val groups to use for this request
+     * @return this request modified with provided groups
+     */
+    public SingleFeatureRequest withGroups(Set<String> val) {
+        request.groups = val;
         return this;
     }
 

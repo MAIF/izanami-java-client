@@ -10,6 +10,7 @@ import org.junit.jupiter.api.*;
 
 import java.time.Duration;
 import java.util.Objects;
+import java.util.TreeSet;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.*;
 import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.options;
@@ -2129,8 +2130,108 @@ public class SSEClientTest {
         });
         mockServer.resetMappings();
         assertThat(client.checkFeatureActivation(newSingleFeatureRequest(id)).join()).isTrue();
-
-
     }
+
+    @Test
+    public void should_send_groups() {
+        String id = "ae5dd05d-4e90-4ce7-bee7-3751750fdeaa";
+        var featureStub = Mocks.feature("bar", true).withOverload(overload(true));
+        String stub = newResponse().withFeature(id, featureStub).toSSEJson();
+        String clientId = "THIS_IS_NOT_A_REAL_DATA_PLEASE_DONT_FILE_AN_ISSUE_ABOUT_THIS";
+        String clientSecret = "THIS_IS_NOT_A_REAL_SECRET_PLEASE_DONT_FILE_AN_ISSUE_ABOUT_THIS";
+
+
+        String eventStream =
+                "id:eventid\n" +
+                        "event:FEATURE_STATES\n" +
+                        "data:" + stub + "\n\n";
+
+        mockServer.stubFor(WireMock.get(urlPathEqualTo("/api/v2/events"))
+                .withQueryParam("conditions", equalTo("true"))
+                .withQueryParam("refreshInterval", equalTo("600"))
+                .withQueryParam("keepAliveInterval", equalTo("25"))
+                .withQueryParam("features", equalTo(id))
+                .withQueryParam("groups", equalTo("bar,foo"))
+                .withHeader("Izanami-Client-Id", equalTo(clientId))
+                .withHeader("Izanami-Client-Secret", equalTo(clientSecret))
+                .willReturn(aResponse()
+                        .withStatus(200)
+                        .withHeader("Content-Type", "text/event-stream")
+                        .withChunkedDribbleDelay(10, 3000)
+                        .withBody(eventStream)));
+
+        client = IzanamiClient.newBuilder(
+                        IzanamiConnectionInformation
+                                .connectionInformation()
+                                .withUrl("http://localhost:9999/api")
+                                .withClientId(clientId)
+                                .withClientSecret(clientSecret)
+                )
+                .withCacheConfiguration(FeatureCacheConfiguration
+                        .newBuilder()
+                        .shouldUseServerSentEvent(true)
+                        .build()
+                )
+                .build();
+        client.isLoaded().join();
+
+        var groups = new TreeSet<String>();
+        groups.add("foo");
+        groups.add("bar");
+        var result = client.checkFeatureActivation(SingleFeatureRequest.newSingleFeatureRequest(id).withGroups(groups)).join();
+        assertThat(result).isTrue();
+    }
+
+    @Test
+    public void should_send_groups_url_too_long() {
+        String id = "ae5dd05d-4e90-4ce7-bee7-3751750fdeaa";
+        var featureStub = Mocks.feature("bar", true).withOverload(overload(true));
+        String stub = newResponse().withFeature(id, featureStub).toSSEJson();
+        String clientId = "THIS_IS_NOT_A_REAL_DATA_PLEASE_DONT_FILE_AN_ISSUE_ABOUT_THIS";
+        String clientSecret = "THIS_IS_NOT_A_REAL_SECRET_PLEASE_DONT_FILE_AN_ISSUE_ABOUT_THIS";
+
+
+        String eventStream =
+                "id:eventid\n" +
+                        "event:FEATURE_STATES\n" +
+                        "data:" + stub + "\n\n";
+
+        mockServer.stubFor(WireMock.post(urlPathEqualTo("/api/v2/_events"))
+                .withQueryParam("conditions", equalTo("true"))
+                .withQueryParam("refreshInterval", equalTo("600"))
+                .withQueryParam("keepAliveInterval", equalTo("25"))
+                .withRequestBody(new EqualToJsonPattern("{\"request\": {\"features\": [\"" + id + "\"] }}", true, false))
+                .withQueryParam("groups", equalTo("bar,foo"))
+                .withHeader("Izanami-Client-Id", equalTo(clientId))
+                .withHeader("Izanami-Client-Secret", equalTo(clientSecret))
+                .willReturn(aResponse()
+                        .withStatus(200)
+                        .withHeader("Content-Type", "text/event-stream")
+                        .withChunkedDribbleDelay(10, 3000)
+                        .withBody(eventStream)));
+
+        client = IzanamiClient.newBuilder(
+                        IzanamiConnectionInformation
+                                .connectionInformation()
+                                .withUrl("http://localhost:9999/api")
+                                .withClientId(clientId)
+                                .withClientSecret(clientSecret)
+                )
+                .withCacheConfiguration(FeatureCacheConfiguration
+                        .newBuilder()
+                        .shouldUseServerSentEvent(true)
+                        .build()
+                )
+                .withMaxUrlSize(10)
+                .build();
+        client.isLoaded().join();
+
+        var groups = new TreeSet<String>();
+        groups.add("foo");
+        groups.add("bar");
+        var result = client.checkFeatureActivation(SingleFeatureRequest.newSingleFeatureRequest(id).withGroups(groups)).join();
+        assertThat(result).isTrue();
+    }
+
 
 }

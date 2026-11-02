@@ -11,11 +11,13 @@ import fr.maif.features.values.FeatureValue;
 import fr.maif.features.values.NumberValue;
 import fr.maif.features.values.StringValue;
 import java.math.BigDecimal;
+import java.util.Set;
+
 public abstract class FeatureOverload<T extends FeatureValue> {
     public final boolean enabled;
     public final Feature.FeatureType featureType;
 
-    public abstract Optional<T> value(String user, String name);
+    public abstract Optional<T> value(String user, String name, Set<String> groups);
 
     public FeatureOverload(Feature.FeatureType featureType, boolean enabled) {
         this.featureType = featureType;
@@ -31,14 +33,14 @@ public abstract class FeatureOverload<T extends FeatureValue> {
         }
 
         @Override
-        public Optional<BooleanValue> value(String user, String name) {
+        public Optional<BooleanValue> value(String user, String name, Set<String> groups) {
             if(!enabled) {
                 return Optional.of(new BooleanValue(false));
             }
             if(conditions.isEmpty()) {
                 return Optional.of( new BooleanValue(true));
             }
-            return Optional.of( new BooleanValue(conditions.stream().anyMatch(cond -> cond.active(user, name))));
+            return Optional.of( new BooleanValue(conditions.stream().anyMatch(cond -> cond.active(user, name, groups))));
         }
     }
 
@@ -53,11 +55,11 @@ public abstract class FeatureOverload<T extends FeatureValue> {
         
         
         @Override
-        public Optional<T> value(String user, String name) {
+        public Optional<T> value(String user, String name, Set<String> groups) {
             if (!enabled) {
                 return null;
             }
-            T result = conditions.stream().filter(cond -> cond.active(user, name))
+            T result = conditions.stream().filter(cond -> cond.active(user, name, groups))
                     .map(cond -> cond.value)
                     .findFirst()
                     .orElse(value);
@@ -105,7 +107,7 @@ public abstract class FeatureOverload<T extends FeatureValue> {
         }
 
         @Override
-        public Optional<T> value(String user, String name) {
+        public Optional<T> value(String user, String name, Set<String> groups) {
             return Optional.empty();
         }
     }

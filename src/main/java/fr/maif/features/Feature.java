@@ -26,7 +26,7 @@ public abstract class Feature<T extends FeatureValue> {
         }
 
 
-    public Optional<T> value(String context, String user) {
+    public Optional<T> value(String context, String user, Set<String> groups) {
         String ctx = Optional.ofNullable(context).orElse("");
         String contextToUse = conditions.keySet().stream()
                 .filter(ctx::startsWith)
@@ -34,7 +34,7 @@ public abstract class Feature<T extends FeatureValue> {
                 .get();
 
         FeatureOverload<T> overload = conditions.get(contextToUse);
-        return overload.value(user, name);
+        return overload.value(user, name, groups);
     }
 
 

@@ -2,6 +2,7 @@ package fr.maif.features;
 
 import java.math.BigDecimal;
 import java.util.Optional;
+import java.util.Set;
 
 import fr.maif.features.values.FeatureValue;
 import fr.maif.features.values.StringValue;
@@ -16,9 +17,9 @@ public class ActivationCondition {
         this.rule = rule;
     }
 
-    public boolean active(String user, String featureId) {
+    public boolean active(String user, String featureId, Set<String> groups) {
         return Optional.ofNullable(period).map(p -> p.active(user)).orElse(true) &&
-                Optional.ofNullable(rule).map(r -> r.active(user, featureId)).orElse(true);
+                Optional.ofNullable(rule).map(r -> r.active(user, featureId, groups)).orElse(true);
     }
 
     public static abstract class ValuedActivationCondition<T extends FeatureValue> extends ActivationCondition {

@@ -77,7 +77,7 @@ public class SSEFeatureService implements FeatureService {
                     missingFeatures.add(f);
                 }
             } else {
-                maybeFeature.value(request.context.orElse(null), request.user).ifPresentOrElse(active -> {
+                maybeFeature.value(request.context.orElse(null), request.user, request.groups).ifPresentOrElse(active -> {
                     LOGGER.debug("Computing activation for {} from cache, result is {}", f.feature, active);
                     activation.put(f.feature, new Success((FeatureValue) active));
                 }, () -> scriptFeatures.add(f));
@@ -101,7 +101,7 @@ public class SSEFeatureService implements FeatureService {
             results.add(missingFuture);
             AtomicBoolean isFirst = new AtomicBoolean(true);
             var newScope = Optional.ofNullable(this.scope)
-                    .map(s -> s.copy().withSpecificFeatures(missingFeatures).withContext(request.context.orElse(null)).withUser(request.user).withPayload(request.payload.orElse(null)))
+                    .map(s -> s.copy().withSpecificFeatures(missingFeatures).withContext(request.context.orElse(null)).withGroups(request.groups).withUser(request.user).withPayload(request.payload.orElse(null)))
                     .orElseGet(() -> request);
             this.scope = newScope;
 
