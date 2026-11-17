@@ -44,7 +44,7 @@ public class SSEClient {
     private final AtomicLong connectionId = new AtomicLong(0L);
     /** Incremented on every reconnect() — used to detect stale delayed reconnects and stale thenAccept callbacks. */
     private final AtomicLong reconnectGeneration = new AtomicLong(0L);
-    /** Tracks consecutive failed reconnect attempts for exponential backoff (5s, 10s, 20s, 40s, 60s cap). */
+    /** Tracks consecutive failures for reconnect delays of 0s, 10s, 15s, ... up to 60s. */
     private final AtomicInteger reconnectAttempts = new AtomicInteger(0);
     private final Object connectionLock = new Object();
     private final AtomicBoolean closed = new AtomicBoolean(false);
@@ -78,7 +78,7 @@ public class SSEClient {
                             reconnect();
                         } else {
                             // Connection healthy for a full life probe cycle —
-                            // safe to reset exponential backoff for future reconnects.
+                            // safe to reset backoff for future reconnects.
                             reconnectAttempts.set(0);
                         }
                     }
@@ -164,7 +164,7 @@ public class SSEClient {
             long myGeneration = reconnectGeneration.get();
 
             this.rawFuture = httpClient.sendAsync(r, HttpResponse.BodyHandlers.ofLines());
-            this.queryFuture = this.rawFuture
+            CompletableFuture<Void> responseFuture = this.rawFuture
                     // orTimeout scopes the timeout to the initial HTTP response only.
                     // Once thenAccept starts (response received), the SSE stream runs
                     // indefinitely — orTimeout does not affect it.
@@ -204,62 +204,66 @@ public class SSEClient {
                                 .forEach(evt -> {
                                     consumer.accept(id, evt);
                                 });
-                    }).exceptionally(e -> {
-                        connected.set(false);
-                        if (closed.get()) {
-                            LOGGER.debug("SSE client is closed, not reconnecting");
-                            return null;
-                        }
-                        if (e instanceof CancellationException ||
-                            (e.getCause() instanceof CancellationException)) {
-                            LOGGER.debug("SSE connection was intentionally cancelled");
-                            return null;
-                        }
-
-                        // Transient errors are network-level failures expected to self-heal:
-                        //   IOException/UncheckedIOException — connection drop, network blip, RST
-                        //   TimeoutException — server slow to respond
-                        // Permanent errors are server-side rejections (401, 403, 404, 500)
-                        // that won't resolve without a config or server-side change.
-                        //
-                        // Both schedule a reconnect (server errors may be temporary),
-                        // but only permanent errors are propagated to the caller so it
-                        // can apply its error strategy immediately. Transient errors
-                        // return null and let the reconnect deliver data silently.
-                        Throwable cause = (e instanceof CompletionException && e.getCause() != null) ? e.getCause() : e;
-                        boolean isTransient = cause instanceof java.io.IOException
-                                || cause instanceof java.io.UncheckedIOException
-                                || cause instanceof java.util.concurrent.TimeoutException;
-
-                        long myGen = reconnectGeneration.get();
-                        int currentReconnectionAttempts = reconnectAttempts.incrementAndGet();
-                        long delay = 0L;
-                        if(currentReconnectionAttempts > 1) {
-                            delay = Math.min(5 * currentReconnectionAttempts, 60);
-                        }
-                        LOGGER.warn("SSE connection lost (transient={}), will reconnect in {}s: {}", isTransient, delay, e.getMessage());
-                        CompletableFuture.delayedExecutor(delay, SECONDS, executorService)
-                                .execute(() -> {
-                                    if (closed.get()) {
-                                        LOGGER.debug("SSE client closed, skipping reconnect");
-                                    } else if (reconnectGeneration.get() == myGen) {
-                                        reconnect();
-                                    } else {
-                                        LOGGER.debug("Skipping stale reconnect, connection already refreshed");
-                                    }
-                                });
-
-                        if (isTransient) {
-                            return null;
-                        }
-                        // Permanent failure — propagate so caller can react,
-                        // but reconnect is still scheduled above
-                        throw (e instanceof CompletionException) ? (CompletionException) e : new CompletionException(e);
                     });
-            return queryFuture;
+            CompletableFuture<Void> handledFuture = responseFuture.exceptionally(e -> {
+                connected.set(false);
+                if (closed.get()) {
+                    LOGGER.debug("SSE client is closed, not reconnecting");
+                    return null;
+                }
+                if (e instanceof CancellationException ||
+                        (e.getCause() instanceof CancellationException)) {
+                    LOGGER.debug("SSE connection was intentionally cancelled");
+                    return null;
+                }
+
+                // Both kinds of failure trigger a reconnect, but only permanent failures
+                // are propagated so the caller can apply its error strategy immediately.
+                if (isTransient(e)) {
+                    return null;
+                }
+                throw (e instanceof CompletionException) ? (CompletionException) e : new CompletionException(e);
+            });
+            this.queryFuture = handledFuture;
+            responseFuture.whenComplete((unused, error) -> {
+                if (error == null || error instanceof CancellationException ||
+                        error.getCause() instanceof CancellationException) {
+                    return;
+                }
+                // The reconnect must not cancel the future while its error handler is still running.
+                handledFuture.whenComplete((result, handledError) -> {
+                    if (closed.get() || handledFuture.isCancelled() || reconnectGeneration.get() != myGeneration) {
+                        return;
+                    }
+                    int currentReconnectionAttempts = reconnectAttempts.incrementAndGet();
+                    long delay = 0L;
+                    if(currentReconnectionAttempts > 1) {
+                        delay = Math.min(5L * currentReconnectionAttempts, 60);
+                    }
+                    LOGGER.warn("SSE connection lost (transient={}), will reconnect in {}s: {}", isTransient(error), delay, error.getMessage());
+                    CompletableFuture.delayedExecutor(delay, SECONDS, executorService)
+                            .execute(() -> {
+                                if (closed.get()) {
+                                    LOGGER.debug("SSE client closed, skipping reconnect");
+                                } else if (reconnectGeneration.get() == myGeneration) {
+                                    reconnect();
+                                } else {
+                                    LOGGER.debug("Skipping stale reconnect, connection already refreshed");
+                                }
+                            });
+                });
+            });
+            return handledFuture;
         } catch (URISyntaxException e) {
             return CompletableFuture.failedFuture(e);
         }
+    }
+
+    private static boolean isTransient(Throwable error) {
+        Throwable cause = (error instanceof CompletionException && error.getCause() != null) ? error.getCause() : error;
+        return cause instanceof java.io.IOException
+                || cause instanceof java.io.UncheckedIOException
+                || cause instanceof java.util.concurrent.TimeoutException;
     }
 
     public CompletableFuture<Void> disconnect() {
