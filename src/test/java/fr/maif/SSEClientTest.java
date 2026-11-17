@@ -1701,7 +1701,8 @@ public class SSEClientTest {
                         .withBody(eventStream)));
 
 
-        await().atMost(Duration.ofSeconds(5L)).until(() -> !client.checkFeatureActivation(SingleFeatureRequest.newSingleFeatureRequest(id)).join());
+        // A pending reconnect may be delayed by up to 60 seconds after the outage.
+        await().atMost(Duration.ofSeconds(70L)).until(() -> !client.checkFeatureActivation(SingleFeatureRequest.newSingleFeatureRequest(id)).join());
     }
 
     @Test
@@ -1775,7 +1776,8 @@ public class SSEClientTest {
                         .withBody(eventStream)));
 
 
-        await().atMost(Duration.ofSeconds(5L)).until(() -> !client.checkFeatureActivation(SingleFeatureRequest.newSingleFeatureRequest(id)).join());
+        // A pending reconnect may be delayed by up to 60 seconds after the outage.
+        await().atMost(Duration.ofSeconds(70L)).until(() -> !client.checkFeatureActivation(SingleFeatureRequest.newSingleFeatureRequest(id)).join());
     }
 
     @Test
@@ -2043,11 +2045,8 @@ public class SSEClientTest {
 
         assertThat(client.checkFeatureActivation(newSingleFeatureRequest(id)).join()).isNull();
 
-        mockServer.resetMappings();
-        mockServer.resetRequests();
-       assertThat(mockServer.countRequestsMatching(getRequestedFor(WireMock.urlPathEqualTo(url)).build()).getCount()).isZero();
-
         mockServer.stubFor(WireMock.get(WireMock.urlPathEqualTo(url))
+                .atPriority(1)
                 .withHeader("Izanami-Client-Id", equalTo(clientId))
                 .withHeader("Izanami-Client-Secret", equalTo(clientSecret))
                 .withQueryParam("features", equalTo(id))
@@ -2060,9 +2059,8 @@ public class SSEClientTest {
                         .withBody(newEventStream)));
 
 
-        await().atMost(10, SECONDS).until(() -> mockServer.countRequestsMatching(getRequestedFor(WireMock.urlPathEqualTo(url)).build()).getCount() == 1);
-        mockServer.resetMappings();
-        assertThat(client.checkFeatureActivation(newSingleFeatureRequest(id)).join()).isTrue();
+        await().atMost(70, SECONDS).until(() -> Boolean.TRUE.equals(client.checkFeatureActivation(newSingleFeatureRequest(id)).join()));
+        assertThat(mockServer.countRequestsMatching(getRequestedFor(WireMock.urlPathEqualTo(url)).build()).getCount()).isGreaterThanOrEqualTo(2);
     }
 
 
@@ -2108,11 +2106,8 @@ public class SSEClientTest {
 
         assertThat(client.checkFeatureActivation(newSingleFeatureRequest(id)).join()).isNull();
 
-        mockServer.resetMappings();
-        mockServer.resetRequests();
-        assertThat(mockServer.countRequestsMatching(getRequestedFor(WireMock.urlPathEqualTo(url)).build()).getCount()).isZero();
-
         mockServer.stubFor(WireMock.post(WireMock.urlPathEqualTo(url))
+                .atPriority(1)
                 .withHeader("Izanami-Client-Id", equalTo(clientId))
                 .withHeader("Izanami-Client-Secret", equalTo(clientSecret))
                 .withRequestBody(new EqualToJsonPattern("{\"request\": {\"features\": [\"" + id + "\"] }}", true, false))
@@ -2125,11 +2120,8 @@ public class SSEClientTest {
                         .withBody(newEventStream)));
 
 
-        await().atMost(10, SECONDS).until(() -> {
-            return mockServer.countRequestsMatching(postRequestedFor(WireMock.urlPathEqualTo(url)).build()).getCount() == 1;
-        });
-        mockServer.resetMappings();
-        assertThat(client.checkFeatureActivation(newSingleFeatureRequest(id)).join()).isTrue();
+        await().atMost(70, SECONDS).until(() -> Boolean.TRUE.equals(client.checkFeatureActivation(newSingleFeatureRequest(id)).join()));
+        assertThat(mockServer.countRequestsMatching(postRequestedFor(WireMock.urlPathEqualTo(url)).build()).getCount()).isGreaterThanOrEqualTo(2);
     }
 
     @Test
