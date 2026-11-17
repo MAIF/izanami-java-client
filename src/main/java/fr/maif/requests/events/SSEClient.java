@@ -232,7 +232,11 @@ public class SSEClient {
                                 || cause instanceof java.util.concurrent.TimeoutException;
 
                         long myGen = reconnectGeneration.get();
-                        long delay = Math.min(5 * (1L << Math.min(reconnectAttempts.getAndIncrement(), 4)), 60);
+                        int currentReconnectionAttempts = reconnectAttempts.incrementAndGet();
+                        long delay = 0L;
+                        if(currentReconnectionAttempts > 1) {
+                            delay = Math.min(5 * currentReconnectionAttempts, 60);
+                        }
                         LOGGER.warn("SSE connection lost (transient={}), will reconnect in {}s: {}", isTransient, delay, e.getMessage());
                         CompletableFuture.delayedExecutor(delay, SECONDS, executorService)
                                 .execute(() -> {
