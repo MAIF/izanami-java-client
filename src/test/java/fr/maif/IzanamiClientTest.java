@@ -2881,12 +2881,12 @@ public class IzanamiClientTest {
         mockServer.resetAll();
 
         var users = List.of("user-62", "user-78", "user-116", "user-90",
-                "user-83", "user-199", "user-85", "user-49");
-        var buckets = List.of(1, 10, 11, 20, 21, 30, 31, 100);
+                "user-83", "user-199", "user-85", "user-49", "\uD83D\uDE80");
+        var buckets = List.of(1, 10, 11, 20, 21, 30, 31, 100, 27);
         var expectedStrings = List.of("sample", "sample", "canary", "canary",
-                "canary", "canary", "base", "base");
+                "canary", "canary", "base", "base", "canary");
         var expectedNumbers = List.of(BigDecimal.ONE, BigDecimal.ONE, BigDecimal.TEN, BigDecimal.TEN,
-                BigDecimal.TEN, BigDecimal.TEN, BigDecimal.ZERO, BigDecimal.ZERO);
+                BigDecimal.TEN, BigDecimal.TEN, BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.TEN);
 
         assertAll(IntStream.range(0, users.size()).mapToObj(index -> () -> {
             var result = client.featureValues(newFeatureRequest()

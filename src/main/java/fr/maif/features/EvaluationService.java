@@ -2,6 +2,7 @@ package fr.maif.features;
 
 import org.apache.commons.codec.digest.MurmurHash3;
 
+import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.util.Set;
@@ -37,7 +38,7 @@ public final class EvaluationService {
 
     public static boolean isPercentageRuleActive(UserPercentage rule, String feature, String user, int rangeStart) {
         String toHash = feature + "-" + user;
-        var bytes = toHash.getBytes();
+        var bytes = toHash.getBytes(StandardCharsets.UTF_8);
         long hash = (Math.abs(MurmurHash3.hash32x86(bytes, 0, bytes.length, 42)) % 100) + 1;
         return hash > rangeStart && hash <= (rule.percentage + rangeStart);
     }
