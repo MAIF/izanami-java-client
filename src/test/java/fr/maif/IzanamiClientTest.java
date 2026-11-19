@@ -4,11 +4,13 @@ import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.client.WireMock;
 
 import com.github.tomakehurst.wiremock.matching.EqualToJsonPattern;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import dev.openfeature.sdk.EvaluationContext;
 import dev.openfeature.sdk.ImmutableContext;
 import dev.openfeature.sdk.Value;
 import fr.maif.errors.IzanamiException;
 import fr.maif.features.values.BooleanCastStrategy;
+import fr.maif.http.ResponseUtils;
 import fr.maif.openfeatures.IzanamiOpenFeatureProvider;
 import fr.maif.requests.IzanamiConnectionInformation;
 import fr.maif.requests.SpecificFeatureRequest;
@@ -16,6 +18,9 @@ import org.junit.jupiter.api.*;
 
 import java.math.BigDecimal;
 import java.time.Duration;
+import java.time.Instant;
+import java.time.ZoneId;
+import java.time.ZoneOffset;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -2798,6 +2803,47 @@ public class IzanamiClientTest {
 
         var noCacheResult = client.stringValue(newSingleFeatureRequest(id).ignoreCache(true)).join();
         assertThat(noCacheResult).isEqualTo("foo");
+    }
+
+    @Test
+    public void local_period_evaluation_should_use_the_current_instant_in_the_condition_timezone() throws Exception {
+        String id = "ae5dd05d-4e90-4ce7-bee7-3751750fdeae";
+        var now = Instant.now();
+        var localDate = now.atZone(ZoneId.systemDefault()).toLocalDate();
+        var timezone = IntStream.rangeClosed(-12, 14).mapToObj(ZoneOffset::ofHours)
+                .filter(zone -> !now.atZone(zone).toLocalDate().equals(localDate))
+                .filter(zone -> now.atZone(zone).getHour() >= 1 && now.atZone(zone).getHour() <= 22)
+                .findFirst().orElseThrow();
+        var featureStub = Mocks.feature("flag", "sample")
+                .withOverload(overload("base", true)
+                        .withCondition(condition().withValue("sample")));
+        var response = (ObjectNode) ResponseUtils.mapper.readTree(
+                newResponse().withFeature(id, featureStub).toJson());
+        var conditionJson = (ObjectNode) response.get(id).get("conditions").get("").get("conditions").get(0);
+        var period = conditionJson.putObject("period");
+        period.put("begin", now.minusSeconds(3600).toString());
+        period.put("end", now.plusSeconds(3600).toString());
+        period.put("timezone", timezone.getId());
+        period.putObject("activationDays").putArray("days")
+                .add(now.atZone(timezone).getDayOfWeek().name());
+        period.putArray("hourPeriods").addObject()
+                .put("startTime", "00:00:00").put("endTime", "23:59:59");
+
+        mockServer.stubFor(WireMock.get(urlPathEqualTo("/api/v2/features"))
+                .withQueryParam("conditions", equalTo("true"))
+                .willReturn(WireMock.okJson(response.toString())));
+        var client = IzanamiClient.newBuilder(
+                        connectionInformation().withUrl("http://localhost:9999/api")
+                                .withClientId("test-client").withClientSecret("test-secret"))
+                .withCacheConfiguration(FeatureCacheConfiguration.newBuilder().enabled(true).build())
+                .build();
+        try {
+            assertThat(client.stringValue(newSingleFeatureRequest(id)).join()).isEqualTo("sample");
+            mockServer.resetAll();
+            assertThat(client.stringValue(newSingleFeatureRequest(id)).join()).isEqualTo("sample");
+        } finally {
+            client.close().join();
+        }
     }
 
     @Test

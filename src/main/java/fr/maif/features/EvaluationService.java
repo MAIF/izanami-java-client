@@ -2,8 +2,7 @@ package fr.maif.features;
 
 import org.apache.commons.codec.digest.MurmurHash3;
 
-import java.time.LocalDate;
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.time.ZoneId;
 import java.util.Set;
 
@@ -11,19 +10,23 @@ public final class EvaluationService {
     private EvaluationService() {}
 
     public static boolean isPeriodActive(FeaturePeriod period) {
-        var now = LocalDateTime.now().atZone(period.timezone).toInstant();
+        var now = Instant.now();
         return period.begin.map(i -> i.isBefore(now)).orElse(true) &&
                 period.end.map(i -> i.isAfter(now)).orElse(true) &&
-                (period.hourPeriods.isEmpty() || period.hourPeriods.stream().anyMatch(p -> isHourPeriodActive(p, period.timezone))) &&
-                period.activationDays.stream().allMatch(d -> d.days.contains(LocalDateTime.now().atZone(period.timezone).getDayOfWeek()));
+                (period.hourPeriods.isEmpty() || period.hourPeriods.stream().anyMatch(p -> isHourPeriodActive(p, period.timezone, now))) &&
+                period.activationDays.stream().allMatch(d -> d.days.contains(now.atZone(period.timezone).getDayOfWeek()));
     }
 
     public static boolean isHourPeriodActive(HourPeriod period, ZoneId timezone) {
-        var zonedStart = LocalDateTime.of(LocalDate.now(), period.startTime)
+        return isHourPeriodActive(period, timezone, Instant.now());
+    }
+
+    private static boolean isHourPeriodActive(HourPeriod period, ZoneId timezone, Instant now) {
+        var date = now.atZone(timezone).toLocalDate();
+        var zonedStart = date.atTime(period.startTime)
                 .atZone(timezone).toInstant();
-        var zonedEnd = LocalDateTime.of(LocalDate.now(), period.endTime)
+        var zonedEnd = date.atTime(period.endTime)
                 .atZone(timezone).toInstant();
-        var now = LocalDateTime.now().atZone(timezone).toInstant();
 
         return zonedStart.isBefore(now) && zonedEnd.isAfter(now);
     }
