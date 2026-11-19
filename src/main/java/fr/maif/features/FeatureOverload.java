@@ -12,6 +12,8 @@ import fr.maif.features.values.NumberValue;
 import fr.maif.features.values.StringValue;
 import java.math.BigDecimal;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.locks.Condition;
 
 public abstract class FeatureOverload<T extends FeatureValue> {
     public final boolean enabled;
@@ -40,7 +42,21 @@ public abstract class FeatureOverload<T extends FeatureValue> {
             if(conditions.isEmpty()) {
                 return Optional.of( new BooleanValue(true));
             }
-            return Optional.of( new BooleanValue(conditions.stream().anyMatch(cond -> cond.active(user, name, groups))));
+            return Optional.of( new BooleanValue(conditions.stream().anyMatch(cond -> {
+                boolean isPeriodActive = Optional.ofNullable(cond.period).map(EvaluationService::isPeriodActive).orElse(true);
+                boolean isRuleActive = Optional.ofNullable(cond.rule).map(r -> {
+                    if(r instanceof UserOrGroupList) {
+                        return EvaluationService.isUserOrGroupRuleActive((UserOrGroupList) r, user, groups);
+                    } else if(r instanceof UserPercentage) {
+                        var percentageRule = (UserPercentage) r;
+                        return EvaluationService.isPercentageRuleActive(percentageRule, name, user, 0);
+                    } else {
+                        throw new IllegalArgumentException("Unknown rule type " + r.getClass().getName());
+                    }
+                }).orElse(true);
+
+                return isPeriodActive && isRuleActive;
+            })));
         }
     }
 
@@ -59,19 +75,32 @@ public abstract class FeatureOverload<T extends FeatureValue> {
             if (!enabled) {
                 return null;
             }
-            T result = conditions.stream().filter(cond -> cond.active(user, name, groups))
-                    .map(cond -> cond.value)
-                    .findFirst()
-                    .orElse(value);
+            AtomicInteger rangeStart = new AtomicInteger(0);
+            T value = this.value;
+            for(ValuedActivationCondition<T> condition: conditions) {
+                boolean periodActive = Optional.ofNullable(condition.period).map(EvaluationService::isPeriodActive).orElse(true);
+                boolean ruleActive = Optional.ofNullable(condition.rule).map(r -> {
+                    if(r instanceof UserOrGroupList) {
+                        return EvaluationService.isUserOrGroupRuleActive((UserOrGroupList) r, user, groups);
+                    } else if(r instanceof UserPercentage) {
+                        var percentageRule = (UserPercentage) r;
+                        return EvaluationService.isPercentageRuleActive(percentageRule, name, user, rangeStart.getAndAdd(percentageRule.percentage));
+                    } else {
+                        throw new IllegalArgumentException("Unknown rule type " + r.getClass().getName());
+                    }
+                }).orElse(true);
+                if(periodActive && ruleActive) {
+                    value = condition.value;
+                    break;
+                }
+            }
 
-            if (result == null) {
+            if (value == null) {
                 return null;
             }
 
-            return Optional.of(result);
+            return Optional.of(value);
         }
-
-      
     }
 
     public static class StringOverload extends ValuedOverload<StringValue> {

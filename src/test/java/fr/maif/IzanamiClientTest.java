@@ -23,6 +23,7 @@ import java.util.TreeSet;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.stream.IntStream;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.*;
 import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.options;
@@ -35,6 +36,7 @@ import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
 import static org.awaitility.Awaitility.await;
+import static org.junit.jupiter.api.Assertions.assertAll;
 
 public class IzanamiClientTest {
     static WireMockServer mockServer;
@@ -2796,6 +2798,63 @@ public class IzanamiClientTest {
 
         var noCacheResult = client.stringValue(newSingleFeatureRequest(id).ignoreCache(true)).join();
         assertThat(noCacheResult).isEqualTo("foo");
+    }
+
+    @Test
+    public void non_boolean_percentage_conditions_should_allocate_disjoint_populations_locally() {
+        String stringId = "ae5dd05d-4e90-4ce7-bee7-3751750fdeae";
+        String numberId = "ae5dd05d-4e90-4ce7-bee7-3751750fdeaf";
+        var stringFeature = Mocks.feature("flag", "base")
+                .withOverload(overload("base", true)
+                        .withCondition(condition().withRule(percentageRule(10)).withValue("sample"))
+                        .withCondition(condition().withRule(percentageRule(20)).withValue("canary")));
+        var numberFeature = Mocks.feature("flag", BigDecimal.ZERO)
+                .withOverload(overload(BigDecimal.ZERO, true)
+                        .withCondition(condition().withRule(percentageRule(10)).withValue(BigDecimal.ONE))
+                        .withCondition(condition().withRule(percentageRule(20)).withValue(BigDecimal.TEN)));
+        var response = newResponse()
+                .withFeature(stringId, stringFeature)
+                .withFeature(numberId, numberFeature);
+
+        mockServer.stubFor(WireMock.get(urlPathEqualTo("/api/v2/features"))
+                .withQueryParam("conditions", equalTo("true"))
+                .willReturn(WireMock.okJson(response.toJson())));
+
+        var client = IzanamiClient.newBuilder(
+                        connectionInformation()
+                                .withUrl("http://localhost:9999/api")
+                                .withClientId("test-client")
+                                .withClientSecret("test-secret")
+                )
+                .withCacheConfiguration(FeatureCacheConfiguration.newBuilder().enabled(true).build())
+                .build();
+
+        var initial = client.featureValues(newFeatureRequest().withFeatures(stringId, numberId)).join();
+        assertThat(initial.stringValue(stringId)).isEqualTo("base");
+        assertThat(initial.numberValue(numberId)).isEqualTo(BigDecimal.ZERO);
+        mockServer.resetAll();
+
+        var users = List.of("user-62", "user-78", "user-116", "user-90",
+                "user-83", "user-199", "user-85", "user-49");
+        var buckets = List.of(1, 10, 11, 20, 21, 30, 31, 100);
+        var expectedStrings = List.of("sample", "sample", "canary", "canary",
+                "canary", "canary", "base", "base");
+        var expectedNumbers = List.of(BigDecimal.ONE, BigDecimal.ONE, BigDecimal.TEN, BigDecimal.TEN,
+                BigDecimal.TEN, BigDecimal.TEN, BigDecimal.ZERO, BigDecimal.ZERO);
+
+        assertAll(IntStream.range(0, users.size()).mapToObj(index -> () -> {
+            var result = client.featureValues(newFeatureRequest()
+                    .withFeatures(stringId, numberId)
+                    .withUser(users.get(index))).join();
+            assertAll(
+                    () -> assertThat(result.stringValue(stringId))
+                            .as("string value for bucket %s (%s)", buckets.get(index), users.get(index))
+                            .isEqualTo(expectedStrings.get(index)),
+                    () -> assertThat(result.numberValue(numberId))
+                            .as("number value for bucket %s (%s)", buckets.get(index), users.get(index))
+                            .isEqualTo(expectedNumbers.get(index))
+            );
+        }));
     }
 
     @Test

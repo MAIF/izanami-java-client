@@ -9,17 +9,12 @@ import fr.maif.features.values.StringValue;
 import fr.maif.features.values.NumberValue;
 
 public class ActivationCondition {
-    private FeaturePeriod period;
-    private ActivationRule rule;
+    public FeaturePeriod period;
+    public ActivationRule rule;
 
     public ActivationCondition(FeaturePeriod period, ActivationRule rule) {
         this.period = period;
         this.rule = rule;
-    }
-
-    public boolean active(String user, String featureId, Set<String> groups) {
-        return Optional.ofNullable(period).map(p -> p.active(user)).orElse(true) &&
-                Optional.ofNullable(rule).map(r -> r.active(user, featureId, groups)).orElse(true);
     }
 
     public static abstract class ValuedActivationCondition<T extends FeatureValue> extends ActivationCondition {
